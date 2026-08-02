@@ -300,10 +300,8 @@
  * ============================================================ */
 
 // ---- CORS 代理列表(按优先级, 失败自动降级) ----
-// ---- CORS 代理列表(按优先级, 失败自动降级) ----
-// 建议部署自己的 Cloudflare Worker 代理(见同目录 worker.js), 速度快且稳定
-// 部署后把地址填到 CUSTOM_PROXY, 例如 'https://你的子域.workers.dev'
-const CUSTOM_PROXY = '';   // 留空则跳过
+// 已部署 Cloudflare Worker 专属代理, 见同目录 worker.js
+const CUSTOM_PROXY = 'https://quark-movie-proxy.quark-movie-proxy.workers.dev';   // 专属代理
 const PROXIES = [
   ...(CUSTOM_PROXY ? [u => CUSTOM_PROXY + '/?url=' + encodeURIComponent(u)] : []),
   u => 'https://cors.eu.org/' + u,
