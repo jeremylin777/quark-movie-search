@@ -308,7 +308,8 @@ const PROXIES = [
   u => u, // 最后尝试直连(万一源站允许)
 ];
 const API_BASE = 'https://zreso.cn';
-const REQUEST_TIMEOUT = 25000;  // 单次请求超时 ms
+const TIMEOUT_FIRST = 10000;  // 首个代理超时 ms (专属代理快)
+const TIMEOUT_FALLBACK = 8000; // 备用代理超时 ms (快速降级)
 
 // ---- 状态映射 ----
 const CLOUD_MAP = {
@@ -327,6 +328,7 @@ let resolvingMap = {};   // t -> Promise 防止重复解析
 const linkCache = {};    // t -> raw_url 内存缓存
 let washQueue = Promise.resolve();  // 解析请求全局队列(限流)
 const WASH_INTERVAL = 2200;         // 每次解析请求之间的最小间隔 ms
+const SEARCH_CACHE_TTL = 10 * 60 * 1000; // 搜索缓存有效期 10 分钟
 
 // ---- DOM ----
 const $ = s => document.querySelector(s);
@@ -346,13 +348,15 @@ function toast(msg) {
   toast._t = setTimeout(() => toastEl.classList.remove('show'), 2200);
 }
 
-async function fetchWithProxy(url, timeout = REQUEST_TIMEOUT) {
+// 统一代理请求: 自动降级所有代理, 支持 JSON / 文本两种返回
+async function fetchViaProxy(url, { asText = false } = {}) {
   let lastErr = null;
-  for (const wrap of PROXIES) {
+  for (let i = 0; i < PROXIES.length; i++) {
+    const timeout = i === 0 ? TIMEOUT_FIRST : TIMEOUT_FALLBACK;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeout);
     try {
-      const res = await fetch(wrap(url), { signal: ctrl.signal });
+      const res = await fetch(PROXIES[i](url), { signal: ctrl.signal });
       clearTimeout(timer);
       if (!res.ok) {
         // 尝试从错误响应体读取具体原因 (如限流提示 "获取链接频繁")
@@ -365,7 +369,7 @@ async function fetchWithProxy(url, timeout = REQUEST_TIMEOUT) {
         err.status = res.status;
         throw err;
       }
-      return await res.json();
+      return asText ? await res.text() : await res.json();
     } catch (e) {
       clearTimeout(timer);
       lastErr = e;
@@ -375,36 +379,28 @@ async function fetchWithProxy(url, timeout = REQUEST_TIMEOUT) {
   throw lastErr || new Error('所有代理均失败');
 }
 
+// 搜索缓存: localStorage 10 分钟有效
+function getSearchCache(keyword) {
+  try {
+    const k = 'qk_cache_' + keyword;
+    const raw = localStorage.getItem(k);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (Date.now() - d.ts > SEARCH_CACHE_TTL) { localStorage.removeItem(k); return null; }
+    return d.data;
+  } catch (_) { return null; }
+}
+function setSearchCache(keyword, data) {
+  try {
+    localStorage.setItem('qk_cache_' + keyword, JSON.stringify({ ts: Date.now(), data }));
+  } catch (_) {}
+}
+
 // 解析请求排队: 串行执行 + 最小间隔, 避免触发源站限流
 function enqueueWash(task) {
   const run = washQueue.then(task, task);
   washQueue = run.catch(() => {}).then(() => new Promise(r => setTimeout(r, WASH_INTERVAL)));
   return run;
-}
-
-// 抓取文本内容(详情页 HTML 等), 走代理
-async function fetchTextWithProxy(url, timeout = REQUEST_TIMEOUT) {
-  let lastErr = null;
-  for (const wrap of PROXIES) {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), timeout);
-    try {
-      const res = await fetch(wrap(url), { signal: ctrl.signal });
-      clearTimeout(timer);
-      if (!res.ok) {
-        let msg = 'HTTP ' + res.status;
-        try { const j = await res.json(); if (j && j.msg) msg = j.msg; } catch (_) {}
-        const err = new Error(msg);
-        err.status = res.status;
-        throw err;
-      }
-      return await res.text();
-    } catch (e) {
-      clearTimeout(timer);
-      lastErr = e;
-    }
-  }
-  throw lastErr || new Error('所有代理均失败');
 }
 
 // 从详情页 HTML 提取网盘链接 (备用解析通道, 不受 wash 限流影响)
@@ -537,13 +533,18 @@ async function doSearch(keyword) {
   lastKeyword = keyword;
   renderFilters();
   resultsEl.innerHTML = '';
-  const q = encodeURIComponent(keyword);
-  const url = `${API_BASE}/api/search?q=${q}&sort=latest`;
   setStatus(`<span class="spinner"></span>正在搜索「${esc(keyword)}」...`);
 
   try {
-    const data = await fetchWithProxy(url);
-    if (!data || !data.ok || !data.data) throw new Error('搜索无结果');
+    // 优先读取 10 分钟内的缓存
+    let data = getSearchCache(keyword);
+    if (!data) {
+      const q = encodeURIComponent(keyword);
+      const url = `${API_BASE}/api/search?q=${q}&sort=latest`;
+      data = await fetchViaProxy(url);
+      if (!data || !data.ok || !data.data) throw new Error('搜索无结果');
+      setSearchCache(keyword, data);
+    }
 
     // 去重: 以 标题+链接 去重
     const seen = new Set();
@@ -565,9 +566,20 @@ async function doSearch(keyword) {
     renderResults();
   } catch (e) {
     console.error(e);
-    setStatus('<span class="err">搜索失败:' + esc(e.message) + ' — 可能是网络或代理暂时不可用,请稍后重试</span>');
-    resultsEl.innerHTML = emptyHTML('搜索出错');
+    const friendly = friendlyErr(e.message);
+    setStatus(`<span class="err">搜索失败:${esc(friendly)}</span> <button class="btn" onclick="doSearch('${esc(lastKeyword.replace(/'/g, "\\'"))}')">↻ 重试</button>`);
+    resultsEl.innerHTML = emptyHTML('搜索出错,请重试');
   }
+}
+
+// 将原始错误转成用户可读的友好提示
+function friendlyErr(msg) {
+  const m = msg || '';
+  if (/频繁|稍后再试|429|Too Many/i.test(m)) return '源站限流了,请等待 10-30 秒再试';
+  if (/所有代理均失败/.test(m)) return '所有代理通道均不可用,可稍后重试或部署专属代理';
+  if (/Failed to fetch|fetch failed|NetworkError|AbortError|network/i.test(m)) return '网络连接不稳定,请稍后重试';
+  if (/无结果|no result/i.test(m)) return '未找到相关资源';
+  return m;
 }
 
 function emptyHTML(text) {
@@ -722,12 +734,12 @@ async function resolveLink(t, title) {
   const p = enqueueWash(async () => {
     let data;
     try {
-      data = await fetchWithProxy(url, 20000);
+      data = await fetchViaProxy(url);
     } catch (e) {
       // 429 限流: 等待后自动重试一次
       if (e.status === 429) {
         await new Promise(r => setTimeout(r, 4000));
-        data = await fetchWithProxy(url, 20000);
+        data = await fetchViaProxy(url);
       } else {
         throw e;
       }
@@ -764,7 +776,7 @@ async function resolveDetail(detailPath, title) {
   box.classList.add('show');
 
   const p = enqueueWash(async () => {
-    const html = await fetchTextWithProxy(url, 20000);
+    const html = await fetchViaProxy(url, { asText: true });
     const urls = extractLinksFromDetail(html);
     if (!urls.length) throw new Error('详情页未找到可用的网盘链接');
     return { url: urls[0] };
@@ -814,15 +826,7 @@ function showResolved(box, rawUrl, title, redirected) {
 }
 
 function errHTML(msg) {
-  let m = msg || '解析失败,链接可能已失效或网络异常';
-  // 限流提示更友好
-  if (/频繁|稍后再试|429|Too Many/i.test(m)) {
-    m = '获取链接过于频繁,源站已限流。请等待 10-30 秒后再试';
-  } else if (/所有代理均失败/.test(m)) {
-    m = '所有代理通道均不可用。建议部署自己的 Cloudflare Worker 代理(见 worker.js),可彻底解决';
-  } else if (/Failed to fetch|fetch failed|NetworkError|AbortError|network/i.test(m)) {
-    m = '网络连接不稳定(公共代理可能波动)。建议部署自己的 Cloudflare Worker 代理,可彻底解决';
-  }
+  const m = friendlyErr(msg || '解析失败,链接可能已失效或网络异常');
   return `<div class="lbl" style="color:var(--red)">${esc(m)}</div>`;
 }
 
