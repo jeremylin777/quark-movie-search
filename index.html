@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>夸克影视搜 · 快速搜索影片电视剧夸克链接</title>
+<meta name="description" content="快速搜索电影、电视剧、动漫的夸克网盘链接,聚合全网网盘影视资源">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%233b82f6'/><circle cx='44' cy='46' r='18' fill='none' stroke='white' stroke-width='8'/><path d='M64 66l14 14' stroke='white' stroke-width='10' stroke-linecap='round'/></svg>">
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --bg-2: #101627;
+    --card: #151d33;
+    --card-hover: #1a2440;
+    --border: #232e4d;
+    --text: #e8ecf6;
+    --text-dim: #9aa5c1;
+    --text-faint: #6b7694;
+    --primary: #3b82f6;
+    --primary-2: #00c2ff;
+    --quark: #4f8cff;
+    --accent: #8b5cf6;
+    --green: #34d399;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --radius: 14px;
+    --shadow: 0 8px 30px rgba(0,0,0,.35);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    background: radial-gradient(1200px 500px at 20% -10%, #1b2a55 0%, transparent 60%),
+                radial-gradient(1000px 500px at 90% -5%, #231a4d 0%, transparent 55%),
+                var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+  /* ===== 头部 ===== */
+  header { padding: 48px 0 20px; text-align: center; }
+  .logo {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 30px; font-weight: 800; letter-spacing: .5px;
+  }
+  .logo .icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 20px rgba(59,130,246,.45);
+  }
+  .logo .icon svg { width: 24px; height: 24px; }
+  .logo em { font-style: normal; color: var(--primary-2); }
+  .subtitle { color: var(--text-dim); font-size: 14px; margin-top: 10px; }
+
+  /* ===== 搜索区 ===== */
+  .search-wrap { max-width: 680px; margin: 30px auto 0; }
+  .search-box {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 50px; padding: 8px 8px 8px 20px;
+    transition: border-color .2s, box-shadow .2s;
+    box-shadow: var(--shadow);
+  }
+  .search-box:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(59,130,246,.15), var(--shadow);
+  }
+  .search-box svg { width: 20px; height: 20px; color: var(--text-faint); flex-shrink: 0; }
+  .search-box input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 17px; min-width: 0;
+  }
+  .search-box input::placeholder { color: var(--text-faint); }
+  .search-box button {
+    border: none; cursor: pointer; border-radius: 40px;
+    padding: 11px 26px; font-size: 15px; font-weight: 600; color: #fff;
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    transition: transform .15s, filter .15s; flex-shrink: 0;
+  }
+  .search-box button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .search-box button:active { transform: scale(.97); }
+
+  /* ===== 状态区 ===== */
+  .status-area { margin-top: 26px; min-height: 28px; text-align: center; color: var(--text-dim); font-size: 14px; }
+  .status-area .err { color: var(--red); }
+  .spinner {
+    display: inline-block; width: 18px; height: 18px; vertical-align: -4px;
+    border: 3px solid rgba(255,255,255,.15); border-top-color: var(--primary-2);
+    border-radius: 50%; animation: spin .7s linear infinite; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== 筛选栏 ===== */
+  .filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0 18px; }
+  .filters .count { color: var(--text-faint); font-size: 13px; margin-right: 4px; }
+  .filters .count b { color: var(--primary-2); }
+  .chip {
+    border: 1px solid var(--border); background: var(--card); color: var(--text-dim);
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer;
+    transition: all .15s;
+  }
+  .chip:hover { border-color: var(--primary); color: var(--text); }
+  .chip.active { background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: #fff; border-color: transparent; }
+  .chip .n { opacity: .7; font-size: 11px; margin-left: 4px; }
+
+  /* 排序控件 */
+  .sort-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .sort-bar .lbl { color: var(--text-faint); font-size: 13px; margin-right: 2px; }
+  .sort-btn {
+    border: 1px solid var(--border); background: var(--card); color: var(--text-dim);
+    padding: 6px 13px; border-radius: 8px; font-size: 13px; cursor: pointer;
+    transition: all .15s; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .sort-btn:hover { border-color: var(--primary); color: var(--text); }
+  .sort-btn.active { background: rgba(59,130,246,.15); border-color: var(--primary); color: var(--primary-2); font-weight: 600; }
+  .sort-btn svg { width: 13px; height: 13px; }
+
+  /* ===== 结果列表 ===== */
+  #results { display: flex; flex-direction: column; gap: 12px; padding-bottom: 60px; }
+  .empty { text-align: center; color: var(--text-faint); padding: 60px 0; font-size: 15px; }
+  .empty svg { width: 56px; height: 56px; opacity: .3; margin-bottom: 16px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px; transition: background .15s, border-color .15s, transform .15s;
+    position: relative;
+  }
+  .card:hover { background: var(--card-hover); border-color: #2e3d68; transform: translateY(-1px); }
+  .card-top { display: flex; align-items: flex-start; gap: 10px; }
+  .card-title { font-size: 15.5px; font-weight: 600; line-height: 1.5; flex: 1; word-break: break-all; }
+  .badge {
+    flex-shrink: 0; font-size: 11.5px; font-weight: 600; padding: 4px 10px;
+    border-radius: 6px; white-space: nowrap; margin-top: 2px;
+  }
+  .badge.quark { background: rgba(79,140,255,.15); color: #7db2ff; border: 1px solid rgba(79,140,255,.35); }
+  .badge.baidu { background: rgba(59,130,246,.15); color: #7db2ff; border: 1px solid rgba(59,130,246,.35); }
+  .badge.xunlei { background: rgba(251,191,36,.12); color: #fcd34d; border: 1px solid rgba(251,191,36,.3); }
+  .badge.uc { background: rgba(52,211,153,.12); color: #6ee7b7; border: 1px solid rgba(52,211,153,.3); }
+  .badge.other { background: rgba(154,165,193,.12); color: var(--text-dim); border: 1px solid rgba(154,165,193,.25); }
+  .card-meta { display: flex; align-items: center; gap: 12px; margin-top: 8px; color: var(--text-faint); font-size: 12.5px; flex-wrap: wrap; }
+  .card-meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--text-faint); }
+  .status-valid { color: var(--green); font-weight: 500; }
+  .status-invalid { color: var(--red); font-weight: 500; }
+  .status-normal { color: var(--text-dim); }
+
+  /* 质量标签 */
+  .quality-tag {
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 5px;
+    background: rgba(139,92,246,.14); color: #c4b5fd; border: 1px solid rgba(139,92,246,.3);
+  }
+  .quality-tag.hd4k { background: rgba(248,113,113,.14); color: #fca5a5; border-color: rgba(248,113,113,.35); }
+  .quality-tag.hd1080 { background: rgba(251,191,36,.12); color: #fcd34d; border-color: rgba(251,191,36,.3); }
+  .quality-tag.hd720 { background: rgba(59,130,246,.12); color: #93c5fd; border-color: rgba(59,130,246,.3); }
+  .quality-tag.size { background: rgba(52,211,153,.1); color: #6ee7b7; border-color: rgba(52,211,153,.25); }
+
+  .card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .btn {
+    border: 1px solid var(--border); background: transparent; color: var(--text-dim);
+    padding: 7px 14px; border-radius: 8px; font-size: 13px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; transition: all .15s;
+  }
+  .btn svg { width: 14px; height: 14px; }
+  .btn:hover { border-color: var(--primary); color: var(--text); background: #1c2a4d; }
+  .btn.primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-2));
+    border-color: transparent; color: #fff; font-weight: 600;
+  }
+  .btn.primary:hover { filter: brightness(1.1); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn .spin {
+    display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.3);
+    border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite;
+  }
+
+  /* 解析结果 */
+  .link-result {
+    margin-top: 12px; background: #0e1425; border: 1px dashed var(--primary);
+    border-radius: 10px; padding: 12px 14px; display: none;
+  }
+  .link-result.show { display: block; animation: fadeIn .25s; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .link-result .lbl { font-size: 11.5px; color: var(--primary-2); font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .link-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .link-row a {
+    flex: 1; min-width: 200px; color: #93c5fd; font-size: 13px; text-decoration: none;
+    word-break: break-all; background: #131b31; border: 1px solid var(--border);
+    padding: 8px 12px; border-radius: 8px; transition: border-color .15s;
+  }
+  .link-row a:hover { border-color: var(--primary); }
+  .link-row .btn { flex-shrink: 0; }
+  .link-result .tip { font-size: 11px; color: var(--text-faint); margin-top: 8px; }
+
+  /* ===== 页脚 ===== */
+  footer { text-align: center; color: var(--text-faint); font-size: 12px; padding: 24px 0 40px; line-height: 1.8; }
+  footer a { color: var(--text-dim); text-decoration: none; }
+  footer a:hover { color: var(--primary-2); }
+
+  /* Toast */
+  .toast {
+    position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%) translateY(20px);
+    background: #1c2a4d; border: 1px solid var(--primary); color: var(--text);
+    padding: 10px 22px; border-radius: 10px; font-size: 14px; z-index: 999;
+    opacity: 0; pointer-events: none; transition: all .3s; box-shadow: var(--shadow);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* 返回顶部 */
+  #backTop {
+    position: fixed; right: 24px; bottom: 24px; width: 42px; height: 42px;
+    border-radius: 50%; border: 1px solid var(--border); background: var(--card);
+    color: var(--text-dim); cursor: pointer; display: none; align-items: center; justify-content: center;
+    transition: all .2s; z-index: 99;
+  }
+  #backTop:hover { color: var(--primary-2); border-color: var(--primary); transform: translateY(-2px); }
+  #backTop.show { display: flex; }
+  #backTop svg { width: 18px; height: 18px; }
+
+  @media (max-width: 600px) {
+    header { padding: 36px 0 10px; }
+    .logo { font-size: 25px; }
+    .search-box input { font-size: 15px; }
+    .search-box button { padding: 10px 18px; font-size: 14px; }
+    .card-title { font-size: 14.5px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="logo">
+      <span class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"/>
+          <path d="M21 21l-4.35-4.35"/>
+        </svg>
+      </span>
+      <span>夸克影视<em>搜</em></span>
+    </div>
+    <p class="subtitle">快速搜索电影 · 电视剧 · 动漫的夸克网盘链接,聚合全网公开资源</p>
+  </div>
+</header>
+
+<div class="container">
+  <div class="search-wrap">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
+      </svg>
+      <input id="searchInput" type="text" placeholder="输入影片 / 电视剧名称,如: 三体、流浪地球2、狂飙…" autocomplete="off">
+      <button id="searchBtn">搜索</button>
+    </div>
+  </div>
+
+  <div class="status-area" id="status">在上方输入影片或电视剧名称,点击搜索或按回车开始查找夸克链接</div>
+
+  <div class="sort-bar" id="sortBar" style="display:none">
+    <span class="lbl">排序</span>
+    <button class="sort-btn active" data-sort="time">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>最新
+    </button>
+    <button class="sort-btn" data-sort="quark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>夸克优先
+    </button>
+    <button class="sort-btn" data-sort="relevance">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>相关度
+    </button>
+    <button class="sort-btn" data-sort="quality">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>高清优先
+    </button>
+  </div>
+
+  <div class="filters" id="filters" style="display:none"></div>
+  <div id="results"></div>
+</div>
+
+<footer>
+  <div class="container">
+    资源来自公开网络(泽索搜 zreso.cn) · 仅供学习研究,请勿商用<br>
+    夸克影视搜 · <a href="https://github.com/MaroD1M/panhub" target="_blank" rel="noopener">类似开源项目 PanHub</a> · 如侵权请联系源站删除
+  </div>
+</footer>
+
+<button id="backTop" title="回到顶部">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 19V5M5 12l7-7 7 7"/>
+  </svg>
+</button>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+ * 夸克影视搜 - 纯前端夸克网盘影视资源搜索
+ * 数据源: 泽索搜 https://zreso.cn (公开 JSON API, 免 Key)
+ * 说明: 泽索搜 API 本身不开放 CORS, 前端通过公共 CORS 代理转发
+ * ============================================================ */
+
+// ---- CORS 代理列表(按优先级, 失败自动降级) ----
+// ---- CORS 代理列表(按优先级, 失败自动降级) ----
+// 建议部署自己的 Cloudflare Worker 代理(见同目录 worker.js), 速度快且稳定
+// 部署后把地址填到 CUSTOM_PROXY, 例如 'https://你的子域.workers.dev'
+const CUSTOM_PROXY = '';   // 留空则跳过
+const PROXIES = [
+  ...(CUSTOM_PROXY ? [u => CUSTOM_PROXY + '/?url=' + encodeURIComponent(u)] : []),
+  u => 'https://cors.eu.org/' + u,
+  u => u, // 最后尝试直连(万一源站允许)
+];
+const API_BASE = 'https://zreso.cn';
+const REQUEST_TIMEOUT = 25000;  // 单次请求超时 ms
+
+// ---- 状态映射 ----
+const CLOUD_MAP = {
+  quark:  { name: '夸克网盘', cls: 'quark' },
+  baidu:  { name: '百度网盘', cls: 'baidu' },
+  xunlei: { name: '迅雷网盘', cls: 'xunlei' },
+  uc:     { name: 'UC网盘',   cls: 'uc' },
+};
+
+// ---- 状态 ----
+let allResults = [];
+let activeFilter = 'all';
+let activeSort = 'time';
+let lastKeyword = '';
+let resolvingMap = {};   // t -> Promise 防止重复解析
+const linkCache = {};    // t -> raw_url 内存缓存
+let washQueue = Promise.resolve();  // 解析请求全局队列(限流)
+const WASH_INTERVAL = 2200;         // 每次解析请求之间的最小间隔 ms
+
+// ---- DOM ----
+const $ = s => document.querySelector(s);
+const searchInput = $('#searchInput');
+const searchBtn = $('#searchBtn');
+const statusEl = $('#status');
+const filtersEl = $('#filters');
+const resultsEl = $('#results');
+const toastEl = $('#toast');
+const backTop = $('#backTop');
+
+// ---- 工具 ----
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => toastEl.classList.remove('show'), 2200);
+}
+
+async function fetchWithProxy(url, timeout = REQUEST_TIMEOUT) {
+  let lastErr = null;
+  for (const wrap of PROXIES) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeout);
+    try {
+      const res = await fetch(wrap(url), { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!res.ok) {
+        // 尝试从错误响应体读取具体原因 (如限流提示 "获取链接频繁")
+        let msg = 'HTTP ' + res.status;
+        try {
+          const j = await res.json();
+          if (j && j.msg) msg = j.msg;
+        } catch (_) {}
+        const err = new Error(msg);
+        err.status = res.status;
+        throw err;
+      }
+      return await res.json();
+    } catch (e) {
+      clearTimeout(timer);
+      lastErr = e;
+      // 继续尝试下一个代理
+    }
+  }
+  throw lastErr || new Error('所有代理均失败');
+}
+
+// 解析请求排队: 串行执行 + 最小间隔, 避免触发源站限流
+function enqueueWash(task) {
+  const run = washQueue.then(task, task);
+  washQueue = run.catch(() => {}).then(() => new Promise(r => setTimeout(r, WASH_INTERVAL)));
+  return run;
+}
+
+// 抓取文本内容(详情页 HTML 等), 走代理
+async function fetchTextWithProxy(url, timeout = REQUEST_TIMEOUT) {
+  let lastErr = null;
+  for (const wrap of PROXIES) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeout);
+    try {
+      const res = await fetch(wrap(url), { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!res.ok) {
+        let msg = 'HTTP ' + res.status;
+        try { const j = await res.json(); if (j && j.msg) msg = j.msg; } catch (_) {}
+        const err = new Error(msg);
+        err.status = res.status;
+        throw err;
+      }
+      return await res.text();
+    } catch (e) {
+      clearTimeout(timer);
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('所有代理均失败');
+}
+
+// 从详情页 HTML 提取网盘链接 (备用解析通道, 不受 wash 限流影响)
+function extractLinksFromDetail(html) {
+  const urls = [];
+  const re = /https?:\/\/pan\.(?:quark|quanks)\.cn\/s\/[A-Za-z0-9]+/g;
+  let m;
+  while ((m = re.exec(html)) && urls.length < 3) {
+    if (!urls.includes(m[0])) urls.push(m[0]);
+  }
+  if (!urls.length) {
+    const re2 = /https?:\/\/pan\.baidu\.com\/s\/[A-Za-z0-9_-]+/g;
+    while ((m = re2.exec(html)) && urls.length < 3) {
+      if (!urls.includes(m[0])) urls.push(m[0]);
+    }
+  }
+  return urls;
+}
+
+function esc(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function cloudType(type) {
+  return CLOUD_MAP[type] || { name: (type || '网盘'), cls: 'other' };
+}
+
+function isWashUrl(u) { return u && u.indexOf('/api/wash?') !== -1; }
+
+// ---- 标题质量解析: 分辨率 + 大小 ----
+function parseQuality(title) {
+  const t = String(title || '').toUpperCase();
+  const q = { score: 0, res: null, resCls: '', size: null, sizeStr: '' };
+
+  // 分辨率识别 (权重从高到低)
+  if (/(4K|2160P?|UHD|8K|4320P?)/.test(t)) { q.res = '4K'; q.resCls = 'hd4k'; q.score += 100; }
+  else if (/(1080P?|FHD|BLURAY|BDRIP|REMUX|蓝光|原盘)/.test(t)) { q.res = '1080P'; q.resCls = 'hd1080'; q.score += 70; }
+  else if (/(720P?|HD)/.test(t)) { q.res = '720P'; q.resCls = 'hd720'; q.score += 40; }
+
+  // 大小识别: 数字 + GB/G/TB/MB
+  const m = t.match(/(\d+(?:\.\d+)?)\s*(TB|GB|G|GiB|MB|M)\b/i);
+  if (m) {
+    const num = parseFloat(m[1]);
+    const unit = m[2].toUpperCase();
+    let mb = 0;
+    if (unit.includes('T')) mb = num * 1024 * 1024;
+    else if (unit.startsWith('G')) mb = num * 1024;
+    else mb = num;
+    q.size = mb;
+    q.sizeStr = (mb >= 1024 * 1024) ? (mb / 1024 / 1024).toFixed(2) + ' TB'
+      : (mb >= 1024) ? (mb / 1024).toFixed(1) + ' GB'
+      : Math.round(mb) + ' MB';
+    // 大小分数: 越大越好, 峰值约 +60
+    q.score += Math.min(60, Math.round(Math.log2(Math.max(256, mb)) * 3.2));
+  }
+
+  // 额外质量提示词
+  if (/(HDR|DOLBY|杜比|ATMOS|全景声)/.test(t)) q.score += 8;
+  if (/(REMUX|原盘|无损)/.test(t)) q.score += 10;
+  if (/(高码|高码率)/.test(t)) q.score += 5;
+
+  return q;
+}
+
+// 判断资源是否含夸克链接
+function hasQuark(r) { return (r.links || []).some(l => l.type === 'quark'); }
+
+// 相关度打分: 标题对关键词的匹配程度
+function relevanceScore(r, kw) {
+  if (!kw) return 0;
+  const title = String(r.title || '').toLowerCase();
+  const k = kw.toLowerCase();
+  let s = 0;
+  if (title === k) s = 100;                        // 完全相等
+  else if (title.startsWith(k)) s = 80;            // 开头匹配
+  else if (title.includes(k)) s = 60;              // 包含
+  else {
+    // 分词匹配: 关键词按空格/常见分隔拆
+    const parts = k.split(/[\s,.，。、\-+ ]/).filter(Boolean);
+    if (parts.length > 1) {
+      const hit = parts.filter(p => title.includes(p)).length;
+      s = 20 + hit / parts.length * 40;
+    }
+  }
+  return s;
+}
+
+// 统一排序: 返回排序后的结果数组
+function sortResults(items) {
+  const arr = items.slice();
+  const kw = lastKeyword;
+  switch (activeSort) {
+    case 'quark':
+      arr.sort((a, b) => {
+        const qa = hasQuark(a) ? 1 : 0, qb = hasQuark(b) ? 1 : 0;
+        if (qa !== qb) return qb - qa;
+        return (b.datetime || '').localeCompare(a.datetime || '');
+      });
+      break;
+    case 'relevance':
+      arr.sort((a, b) => {
+        const ra = relevanceScore(a, kw), rb = relevanceScore(b, kw);
+        if (ra !== rb) return rb - ra;
+        return (b.datetime || '').localeCompare(a.datetime || '');
+      });
+      break;
+    case 'quality':
+      arr.sort((a, b) => {
+        const qa = parseQuality(a.title), qb = parseQuality(b.title);
+        if (qa.score !== qb.score) return qb.score - qa.score;
+        return (b.datetime || '').localeCompare(a.datetime || '');
+      });
+      break;
+    default: // time - 保持 API 返回顺序(已是时间倒序)
+      break;
+  }
+  return arr;
+}
+
+// ---- 搜索 ----
+async function doSearch(keyword) {
+  keyword = (keyword || '').trim();
+  if (!keyword) return;
+  if (keyword.length > 40) keyword = keyword.slice(0, 40);
+
+  allResults = [];
+  activeFilter = 'all';
+  lastKeyword = keyword;
+  renderFilters();
+  resultsEl.innerHTML = '';
+  const q = encodeURIComponent(keyword);
+  const url = `${API_BASE}/api/search?q=${q}&sort=latest`;
+  setStatus(`<span class="spinner"></span>正在搜索「${esc(keyword)}」...`);
+
+  try {
+    const data = await fetchWithProxy(url);
+    if (!data || !data.ok || !data.data) throw new Error('搜索无结果');
+
+    // 去重: 以 标题+链接 去重
+    const seen = new Set();
+    (data.data.results || []).forEach(r => {
+      const key = (r.title || '') + '|' + (r.first_url || '');
+      if (seen.has(key)) return;
+      seen.add(key);
+      allResults.push(r);
+    });
+
+    if (!allResults.length) {
+      setStatus(`未找到「${esc(keyword)}」相关资源,换个关键词试试`);
+      resultsEl.innerHTML = emptyHTML('没有找到相关资源');
+      return;
+    }
+    setStatus(`找到 ${allResults.length} 条相关资源`);
+    document.getElementById('sortBar').style.display = 'flex';
+    renderFilters();
+    renderResults();
+  } catch (e) {
+    console.error(e);
+    setStatus('<span class="err">搜索失败:' + esc(e.message) + ' — 可能是网络或代理暂时不可用,请稍后重试</span>');
+    resultsEl.innerHTML = emptyHTML('搜索出错');
+  }
+}
+
+function emptyHTML(text) {
+  return `<div class="empty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
+    </svg>
+    <div>${esc(text)}</div>
+  </div>`;
+}
+
+function setStatus(html) {
+  statusEl.innerHTML = html;
+}
+
+// ---- 筛选 ----
+function computeCounts() {
+  const c = { all: allResults.length };
+  allResults.forEach(r => {
+    const types = (r.links || []).map(l => l.type).filter(Boolean);
+    types.forEach(t => { c[t] = (c[t] || 0) + 1; });
+  });
+  return c;
+}
+
+function renderFilters() {
+  const counts = computeCounts();
+  const chips = [['all', '全部', counts.all]];
+  Object.keys(CLOUD_MAP).forEach(t => {
+    if (counts[t]) chips.push([t, CLOUD_MAP[t].name, counts[t]]);
+  });
+  filtersEl.style.display = 'flex';
+  filtersEl.innerHTML = `<span class="count">共 <b>${allResults.length}</b> 条</span>` + chips.map(([k, name, n]) =>
+    `<button class="chip ${k === activeFilter ? 'active' : ''}" data-f="${k}">${name}<span class="n">${n}</span></button>`
+  ).join('');
+}
+
+// ---- 渲染结果 ----
+function renderResults() {
+  const items = sortResults(allResults.filter(r => {
+    if (activeFilter === 'all') return true;
+    return (r.links || []).some(l => l.type === activeFilter);
+  }));
+
+  if (!items.length) {
+    resultsEl.innerHTML = emptyHTML('当前筛选下没有结果');
+    return;
+  }
+
+  resultsEl.innerHTML = items.map(r => cardHTML(r)).join('');
+}
+
+function cardHTML(r) {
+  const title = r.title || '未知资源';
+  const date = (r.date || '').slice(0, 10) || '';
+  const type = cloudType((r.links || [])[0] && (r.links[0].type));
+  const status = r.status || ((r.links || [])[0] && r.links[0].status) || 'normal';
+
+  const statusHTML = status === 'valid' ? '<span class="status-valid">✓ 有效</span>'
+    : status === 'invalid' ? '<span class="status-invalid">✕ 失效</span>'
+    : '<span class="status-normal">状态正常</span>';
+
+  const types = [...new Set((r.links || []).map(l => l.type).filter(Boolean))];
+  const badges = types.length
+    ? types.map(t => { const c = cloudType(t); return `<span class="badge ${c.cls}">${c.name}</span>`; }).join('')
+    : `<span class="badge other">${esc(type.name)}</span>`;
+
+  const firstUrl = r.first_url || '';
+  const isWash = isWashUrl(firstUrl);
+  const isDetail = firstUrl.indexOf('/detail/') === 0;
+  const canOpen = /^https?:\/\//.test(firstUrl);
+  const firstLinkType = (r.links || [])[0] && (r.links[0].type);
+  const resolveLabel = firstLinkType === 'quark' ? '解析夸克链接' : `解析${cloudType(firstLinkType).name}`;
+
+  // 质量标签 (从标题解析)
+  const pq = parseQuality(title);
+  let qualityTags = '';
+  if (pq.res) qualityTags += `<span class="quality-tag ${pq.resCls}">${pq.res}</span>`;
+  if (pq.sizeStr) qualityTags += `<span class="quality-tag size">${pq.sizeStr}</span>`;
+
+  let actions = '';
+  const dataKey = isWash ? firstUrl.split('t=')[1] : firstUrl;
+  if (isWash || isDetail) {
+    const btnKind = isWash ? 'resolve-btn' : 'detail-btn';
+    actions += `<button class="btn primary ${btnKind}" data-t="${esc(dataKey)}" data-title="${esc(title)}" data-label="${esc(resolveLabel)}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>${resolveLabel}
+    </button>`;
+  } else if (canOpen) {
+    actions += `<a class="btn primary" href="${esc(firstUrl)}" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/>
+      </svg>打开链接
+    </a>`;
+    actions += copyBtn(firstUrl, '复制链接');
+  } else {
+    actions += `<a class="btn" href="${API_BASE}${esc(firstUrl)}" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/>
+      </svg>查看详情
+    </a>`;
+  }
+
+  return `
+  <div class="card" data-title="${esc(title)}">
+    <div class="card-top">
+      <div class="card-title">${esc(title)}</div>
+      <span class="badge ${type.cls}">${esc(type.name)}</span>
+    </div>
+    <div class="card-meta">
+      <span>${date || '时间未知'}</span>
+      ${qualityTags ? `<span class="dot"></span>${qualityTags}` : ''}
+      ${badges ? `<span class="dot"></span>${badges}` : ''}
+      <span class="dot"></span>${statusHTML}
+    </div>
+    <div class="card-actions">${actions}</div>
+    <div class="link-result" id="lr-${esc(dataKey.replace(/[^a-zA-Z0-9-]/g,''))}"></div>
+  </div>`;
+}
+
+function copyBtn(url, label) {
+  return `<button class="btn copy-btn" data-copy="${esc(url)}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+    </svg>${label}
+  </button>`;
+}
+
+// ---- 解析夸克链接 (wash) ----
+async function resolveLink(t, title) {
+  const box = document.getElementById('lr-' + (t || '').replace(/[^a-zA-Z0-9-]/g, ''));
+  if (!box) return;
+
+  if (linkCache[t]) {
+    showResolved(box, linkCache[t], title);
+    return;
+  }
+  if (resolvingMap[t]) {
+    try {
+      const { url: u, redirected } = await resolvingMap[t];
+      showResolved(box, u, title, redirected);
+    } catch (e) { box.innerHTML = errHTML(e.message); }
+    return;
+  }
+
+  const url = `${API_BASE}/api/wash?t=${encodeURIComponent(t)}`;
+  box.innerHTML = `<div style="color:var(--text-dim);font-size:13px"><span class="spinner" style="width:14px;height:14px;vertical-align:-2px"></span>正在解析链接,请稍候...</div>`;
+  box.classList.add('show');
+
+  // 解析请求放入全局队列, 串行 + 间隔, 避免触发源站限流(429)
+  const p = enqueueWash(async () => {
+    let data;
+    try {
+      data = await fetchWithProxy(url, 20000);
+    } catch (e) {
+      // 429 限流: 等待后自动重试一次
+      if (e.status === 429) {
+        await new Promise(r => setTimeout(r, 4000));
+        data = await fetchWithProxy(url, 20000);
+      } else {
+        throw e;
+      }
+    }
+    if (!data) throw new Error('解析失败:无响应');
+    if (data.ok && data.raw_url) return { url: data.raw_url };
+    if (data.redirect) return { url: data.redirect, redirected: true };
+    throw new Error(data.msg || '链接无效或已过期');
+  });
+
+  resolvingMap[t] = p;
+  try {
+    const { url: raw, redirected } = await p;
+    linkCache[t] = raw;
+    showResolved(box, raw, title, redirected);
+  } catch (e) {
+    console.error(e);
+    box.innerHTML = errHTML(e.message);
+  }
+}
+
+// 备用解析: 从详情页 /detail/xxx 直接提取夸克链接 (不受 wash 限流影响)
+async function resolveDetail(detailPath, title) {
+  const box = document.getElementById('lr-' + (detailPath || '').replace(/[^a-zA-Z0-9-]/g, ''));
+  if (!box) return;
+
+  if (linkCache[detailPath]) {
+    showResolved(box, linkCache[detailPath], title);
+    return;
+  }
+
+  const url = `${API_BASE}${detailPath}`;
+  box.innerHTML = `<div style="color:var(--text-dim);font-size:13px"><span class="spinner" style="width:14px;height:14px;vertical-align:-2px"></span>正在解析链接,请稍候...</div>`;
+  box.classList.add('show');
+
+  const p = enqueueWash(async () => {
+    const html = await fetchTextWithProxy(url, 20000);
+    const urls = extractLinksFromDetail(html);
+    if (!urls.length) throw new Error('详情页未找到可用的网盘链接');
+    return { url: urls[0] };
+  });
+
+  try {
+    const { url: raw } = await p;
+    linkCache[detailPath] = raw;
+    showResolved(box, raw, title);
+  } catch (e) {
+    console.error(e);
+    box.innerHTML = errHTML(e.message);
+  }
+}
+
+function showResolved(box, rawUrl, title, redirected) {
+  const host = (rawUrl.match(/^https?:\/\/([^\/]+)/) || [])[1] || '';
+  const isQuark = host.includes('pan.quark.cn');
+  const diskName = isQuark ? '夸克网盘'
+    : host.includes('pan.baidu.com') ? '百度网盘'
+    : host.includes('pan.xunlei.com') ? '迅雷网盘'
+    : host.includes('drive.uc.cn') ? 'UC网盘'
+    : host.includes('aliyundrive.com') || host.includes('alipan.com') ? '阿里云盘'
+    : '网盘';
+  const openLabel = isQuark ? '打开夸克' : '打开链接';
+
+  box.innerHTML = `
+    <div class="lbl">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>${esc(diskName)}链接${redirected ? '(已重定向)' : ''}
+    </div>
+    <div class="link-row">
+      <a href="${esc(rawUrl)}" target="_blank" rel="noopener">${esc(rawUrl)}</a>
+      <button class="btn copy-btn" data-copy="${esc(rawUrl)}">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+        </svg>复制
+      </button>
+      <a class="btn primary" href="${esc(rawUrl)}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/>
+        </svg>${openLabel}
+      </a>
+    </div>
+    <div class="tip">提示: 链接来自公开网络资源,打开后转存到自己的网盘即可观看</div>`;
+}
+
+function errHTML(msg) {
+  let m = msg || '解析失败,链接可能已失效或网络异常';
+  // 限流提示更友好
+  if (/频繁|稍后再试|429|Too Many/i.test(m)) {
+    m = '获取链接过于频繁,源站已限流。请等待 10-30 秒后再试';
+  } else if (/所有代理均失败/.test(m)) {
+    m = '所有代理通道均不可用。建议部署自己的 Cloudflare Worker 代理(见 worker.js),可彻底解决';
+  } else if (/Failed to fetch|fetch failed|NetworkError|AbortError|network/i.test(m)) {
+    m = '网络连接不稳定(公共代理可能波动)。建议部署自己的 Cloudflare Worker 代理,可彻底解决';
+  }
+  return `<div class="lbl" style="color:var(--red)">${esc(m)}</div>`;
+}
+
+// ---- 事件绑定 ----
+function bindEvents() {
+  searchBtn.addEventListener('click', () => doSearch(searchInput.value));
+  searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(searchInput.value); });
+
+  filtersEl.addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    activeFilter = chip.dataset.f;
+    document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c === chip));
+    renderResults();
+    scrollToResults();
+  });
+
+  // 排序切换
+  document.getElementById('sortBar').addEventListener('click', e => {
+    const btn = e.target.closest('.sort-btn');
+    if (!btn) return;
+    activeSort = btn.dataset.sort;
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b === btn));
+    renderResults();
+    scrollToResults();
+  });
+
+  resultsEl.addEventListener('click', async e => {
+    // 复制
+    const copyBtnEl = e.target.closest('.copy-btn');
+    if (copyBtnEl) {
+      const text = copyBtnEl.dataset.copy;
+      try {
+        await navigator.clipboard.writeText(text);
+        toast('已复制到剪贴板 ✓');
+      } catch (err) {
+        // 降级
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); ta.remove();
+        toast('已复制到剪贴板 ✓');
+      }
+      return;
+    }
+    // 解析 (wash)
+    const rb = e.target.closest('.resolve-btn');
+    if (rb) {
+      const origLabel = rb.dataset.label || '解析链接';
+      rb.disabled = true;
+      rb.innerHTML = '<span class="spin"></span>解析中...';
+      try {
+        await resolveLink(rb.dataset.t, rb.dataset.title);
+      } finally {
+        rb.disabled = false;
+        rb.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>${origLabel}`;
+      }
+      return;
+    }
+    // 解析 (详情页备用通道)
+    const db = e.target.closest('.detail-btn');
+    if (db) {
+      const origLabel = db.dataset.label || '解析链接';
+      db.disabled = true;
+      db.innerHTML = '<span class="spin"></span>解析中...';
+      try {
+        await resolveDetail(db.dataset.t, db.dataset.title);
+      } finally {
+        db.disabled = false;
+        db.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>${origLabel}`;
+      }
+    }
+  });
+
+  // 返回顶部
+  window.addEventListener('scroll', () => {
+    backTop.classList.toggle('show', window.scrollY > 400);
+  });
+  backTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+}
+
+function scrollToResults() {
+  const y = resultsEl.offsetTop;
+  window.scrollTo({ top: Math.max(0, y - 120), behavior: 'smooth' });
+}
+
+// ---- 初始化 ----
+function init() {
+  bindEvents();
+  // 页面初始为空, 等待用户输入搜索
+}
+init();
+</script>
+</body>
+</html>
