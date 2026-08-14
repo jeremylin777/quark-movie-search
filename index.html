@@ -122,6 +122,8 @@
   #results { display: flex; flex-direction: column; gap: 12px; padding-bottom: 60px; }
   .empty { text-align: center; color: var(--text-faint); padding: 60px 0; font-size: 15px; }
   .empty svg { width: 56px; height: 56px; opacity: .3; margin-bottom: 16px; }
+  .load-more-wrap { display: flex; justify-content: center; padding: 8px 0 4px; }
+  .load-more-btn { padding: 10px 28px; font-size: 14px; }
 
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
@@ -155,6 +157,16 @@
   .quality-tag.hd1080 { background: rgba(251,191,36,.12); color: #fcd34d; border-color: rgba(251,191,36,.3); }
   .quality-tag.hd720 { background: rgba(59,130,246,.12); color: #93c5fd; border-color: rgba(59,130,246,.3); }
   .quality-tag.size { background: rgba(52,211,153,.1); color: #6ee7b7; border-color: rgba(52,211,153,.25); }
+
+  /* 字幕标签 */
+  .sub-tag {
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 5px;
+    background: rgba(52,211,153,.16); color: #6ee7b7; border: 1px solid rgba(52,211,153,.4);
+  }
+  .sub-tag.inner { background: rgba(52,211,153,.22); color: #5eead4; border-color: rgba(52,211,153,.55); }
+  .sub-tag.dual { background: rgba(96,165,250,.16); color: #93c5fd; border-color: rgba(96,165,250,.4); }
+  .sub-tag.effect { background: rgba(192,132,252,.16); color: #d8b4fe; border-color: rgba(192,132,252,.4); }
+  .sub-tag.nosub { background: rgba(248,113,113,.12); color: #fca5a5; border-color: rgba(248,113,113,.3); }
 
   .card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
   .btn {
@@ -271,6 +283,9 @@
     <button class="sort-btn" data-sort="quality">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>高清优先
     </button>
+    <button class="sort-btn" data-sort="subtitle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15h4"/><path d="M15 15h2"/><path d="M7 12h10"/></svg>字幕优先
+    </button>
   </div>
 
   <div class="filters" id="filters" style="display:none"></div>
@@ -317,6 +332,9 @@ const CLOUD_MAP = {
   baidu:  { name: '百度网盘', cls: 'baidu' },
   xunlei: { name: '迅雷网盘', cls: 'xunlei' },
   uc:     { name: 'UC网盘',   cls: 'uc' },
+  aliyun: { name: '阿里云盘', cls: 'baidu' },
+  '115':  { name: '115网盘',  cls: 'uc' },
+  tianyi: { name: '天翼云盘', cls: 'uc' },
 };
 
 // ---- 状态 ----
@@ -324,6 +342,8 @@ let allResults = [];
 let activeFilter = 'all';
 let activeSort = 'time';
 let lastKeyword = '';
+let visibleCount = 60;            // 当前渲染条数(分页)
+const RENDER_BATCH = 60;          // 每次渲染/加载的条数
 let resolvingMap = {};   // t -> Promise 防止重复解析
 const linkCache = {};    // t -> raw_url 内存缓存
 let washQueue = Promise.resolve();  // 解析请求全局队列(限流)
@@ -432,6 +452,38 @@ function cloudType(type) {
 
 function isWashUrl(u) { return u && u.indexOf('/api/wash?') !== -1; }
 
+// ---- 字幕识别规则(从标题关键词判断是否有字幕) ----
+// 优先级从高到低, 命中即返回(特效字幕需在双语之前, 因"中英特效"含"中英")
+const SUBTITLE_RULES = [
+  { type: 'inner',  label: '内封字幕', cls: 'inner',  kw: ['内封', '内嵌字幕', '内置字幕', '硬字幕'] },
+  { type: 'effect', label: '特效字幕', cls: 'effect', kw: ['特效字幕', '中英特效', '特效中字'] },
+  { type: 'dual',   label: '双语字幕', cls: 'dual',   kw: ['双语', '中英', '简繁英', '双字'] },
+  { type: 'zh',     label: '中文字幕', cls: 'inner',  kw: ['中字', '中文字幕', '国语中字', '国配中字', '繁中', '简中', '简繁', '中文'] },
+  { type: 'ext',    label: '外挂字幕', cls: 'dual',   kw: ['外挂字幕', '外挂'] },
+];
+const NOSUB_WORDS = ['无字幕', '生肉', '无字', 'no sub', 'nosub'];
+
+// 解析字幕: 返回 { subtitled, type, label, cls } 或 null
+function parseSubtitle(title) {
+  const t = String(title || '');
+  // 先排除明确无字幕的
+  if (NOSUB_WORDS.some(w => t.toLowerCase().includes(w.toLowerCase()))) {
+    return { subtitled: false, type: 'nosub', label: '无字幕', cls: 'nosub' };
+  }
+  for (const rule of SUBTITLE_RULES) {
+    if (rule.kw.some(k => t.includes(k))) {
+      return { subtitled: true, type: rule.type, label: rule.label, cls: rule.cls };
+    }
+  }
+  return null; // 未知
+}
+
+// 是否明确有字幕
+function hasSubtitle(r) {
+  const s = parseSubtitle(r.title);
+  return !!(s && s.subtitled);
+}
+
 // ---- 标题质量解析: 分辨率 + 大小 ----
 function parseQuality(title) {
   const t = String(title || '').toUpperCase();
@@ -516,10 +568,27 @@ function sortResults(items) {
         return (b.datetime || '').localeCompare(a.datetime || '');
       });
       break;
+    case 'subtitle':
+      // 有字幕优先, 其次内封/双语/特效 > 中字 > 无字幕 > 未知
+      arr.sort((a, b) => {
+        const sa = subtitleRank(a), sb = subtitleRank(b);
+        if (sa !== sb) return sb - sa;
+        return (b.datetime || '').localeCompare(a.datetime || '');
+      });
+      break;
     default: // time - 保持 API 返回顺序(已是时间倒序)
       break;
   }
   return arr;
+}
+
+// 字幕质量评分(用于排序): 内封 5 > 双语/特效 4 > 中字 3 > 外挂 2 > 未知 1 > 无字幕 0
+function subtitleRank(r) {
+  const s = parseSubtitle(r.title);
+  if (!s) return 1;
+  if (!s.subtitled) return 0;
+  const rank = { inner: 5, dual: 4, effect: 4, zh: 3, ext: 2 };
+  return rank[s.type] || 3;
 }
 
 // ---- 搜索 ----
@@ -531,6 +600,7 @@ async function doSearch(keyword) {
   allResults = [];
   activeFilter = 'all';
   lastKeyword = keyword;
+  visibleCount = RENDER_BATCH;
   renderFilters();
   resultsEl.innerHTML = '';
   setStatus(`<span class="spinner"></span>正在搜索「${esc(keyword)}」...`);
@@ -597,8 +667,9 @@ function setStatus(html) {
 
 // ---- 筛选 ----
 function computeCounts() {
-  const c = { all: allResults.length };
+  const c = { all: allResults.length, sub: 0 };
   allResults.forEach(r => {
+    if (hasSubtitle(r)) c.sub++;
     const types = (r.links || []).map(l => l.type).filter(Boolean);
     types.forEach(t => { c[t] = (c[t] || 0) + 1; });
   });
@@ -608,6 +679,7 @@ function computeCounts() {
 function renderFilters() {
   const counts = computeCounts();
   const chips = [['all', '全部', counts.all]];
+  if (counts.sub) chips.push(['sub', '📝 有字幕', counts.sub]);
   Object.keys(CLOUD_MAP).forEach(t => {
     if (counts[t]) chips.push([t, CLOUD_MAP[t].name, counts[t]]);
   });
@@ -621,6 +693,7 @@ function renderFilters() {
 function renderResults() {
   const items = sortResults(allResults.filter(r => {
     if (activeFilter === 'all') return true;
+    if (activeFilter === 'sub') return hasSubtitle(r);
     return (r.links || []).some(l => l.type === activeFilter);
   }));
 
@@ -629,7 +702,12 @@ function renderResults() {
     return;
   }
 
-  resultsEl.innerHTML = items.map(r => cardHTML(r)).join('');
+  const visible = items.slice(0, visibleCount);
+  const hasMore = items.length > visibleCount;
+  resultsEl.innerHTML = visible.map(r => cardHTML(r)).join('') +
+    (hasMore
+      ? `<div class="load-more-wrap"><button class="btn load-more-btn">加载更多 (${visibleCount} / ${items.length})</button></div>`
+      : '');
 }
 
 function cardHTML(r) {
@@ -653,6 +731,10 @@ function cardHTML(r) {
   const canOpen = /^https?:\/\//.test(firstUrl);
   const firstLinkType = (r.links || [])[0] && (r.links[0].type);
   const resolveLabel = firstLinkType === 'quark' ? '解析夸克链接' : `解析${cloudType(firstLinkType).name}`;
+
+  // 字幕标签 (从标题解析, 优先显示)
+  const ps = parseSubtitle(title);
+  const subTag = ps ? `<span class="sub-tag ${ps.cls}">${ps.label}</span>` : '';
 
   // 质量标签 (从标题解析)
   const pq = parseQuality(title);
@@ -692,6 +774,7 @@ function cardHTML(r) {
     </div>
     <div class="card-meta">
       <span>${date || '时间未知'}</span>
+      ${subTag ? `<span class="dot"></span>${subTag}` : ''}
       ${qualityTags ? `<span class="dot"></span>${qualityTags}` : ''}
       ${badges ? `<span class="dot"></span>${badges}` : ''}
       <span class="dot"></span>${statusHTML}
@@ -839,6 +922,7 @@ function bindEvents() {
     const chip = e.target.closest('.chip');
     if (!chip) return;
     activeFilter = chip.dataset.f;
+    visibleCount = RENDER_BATCH;
     document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c === chip));
     renderResults();
     scrollToResults();
@@ -849,12 +933,19 @@ function bindEvents() {
     const btn = e.target.closest('.sort-btn');
     if (!btn) return;
     activeSort = btn.dataset.sort;
+    visibleCount = RENDER_BATCH;
     document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b === btn));
     renderResults();
     scrollToResults();
   });
 
   resultsEl.addEventListener('click', async e => {
+    // 加载更多
+    if (e.target.closest('.load-more-btn')) {
+      visibleCount += RENDER_BATCH;
+      renderResults();
+      return;
+    }
     // 复制
     const copyBtnEl = e.target.closest('.copy-btn');
     if (copyBtnEl) {
