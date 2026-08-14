@@ -124,6 +124,8 @@
   .empty svg { width: 56px; height: 56px; opacity: .3; margin-bottom: 16px; }
   .load-more-wrap { display: flex; justify-content: center; padding: 8px 0 4px; }
   .load-more-btn { padding: 10px 28px; font-size: 14px; }
+  .group-toggle { margin: -6px 0 4px; padding-left: 18px; }
+  .group-btn { font-size: 12.5px; padding: 5px 12px; color: var(--primary-2); border-color: rgba(59,130,246,.35); background: rgba(59,130,246,.08); }
 
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
@@ -286,6 +288,10 @@
     <button class="sort-btn" data-sort="subtitle">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15h4"/><path d="M15 15h2"/><path d="M7 12h10"/></svg>字幕优先
     </button>
+    <span style="flex:1"></span>
+    <button class="sort-btn" id="mergeBtn" data-merge="0" title="同名影片的多个版本折叠成一条">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>合并同名
+    </button>
   </div>
 
   <div class="filters" id="filters" style="display:none"></div>
@@ -344,11 +350,15 @@ let activeSort = 'time';
 let lastKeyword = '';
 let visibleCount = 60;            // 当前渲染条数(分页)
 const RENDER_BATCH = 60;          // 每次渲染/加载的条数
+let searchSeq = 0;                // 搜索请求序号(防竞态)
+let mergeSame = false;            // 是否合并同名多版本
+let expandedGroups = new Set();   // 已展开的合并组(核心名集合)
 let resolvingMap = {};   // t -> Promise 防止重复解析
 const linkCache = {};    // t -> raw_url 内存缓存
 let washQueue = Promise.resolve();  // 解析请求全局队列(限流)
 const WASH_INTERVAL = 2200;         // 每次解析请求之间的最小间隔 ms
 const SEARCH_CACHE_TTL = 10 * 60 * 1000; // 搜索缓存有效期 10 分钟
+const CACHE_MAX = 20;              // 缓存最多保留的搜索词数(LRU)
 
 // ---- DOM ----
 const $ = s => document.querySelector(s);
@@ -399,10 +409,15 @@ async function fetchViaProxy(url, { asText = false } = {}) {
   throw lastErr || new Error('所有代理均失败');
 }
 
-// 搜索缓存: localStorage 10 分钟有效
+// 关键词归一化: 去空白/连字符/下划线 + 统一小写, 提高缓存命中率
+function normalizeKeyword(k) {
+  return String(k || '').replace(/[\s\-_.]+/g, '').toLowerCase();
+}
+
+// 搜索缓存: localStorage 10 分钟有效, LRU 最多 20 个词
 function getSearchCache(keyword) {
   try {
-    const k = 'qk_cache_' + keyword;
+    const k = 'qk_cache_' + normalizeKeyword(keyword);
     const raw = localStorage.getItem(k);
     if (!raw) return null;
     const d = JSON.parse(raw);
@@ -412,7 +427,18 @@ function getSearchCache(keyword) {
 }
 function setSearchCache(keyword, data) {
   try {
-    localStorage.setItem('qk_cache_' + keyword, JSON.stringify({ ts: Date.now(), data }));
+    const key = 'qk_cache_' + normalizeKeyword(keyword);
+    // LRU 淘汰: 维护访问顺序列表, 超上限删除最旧的
+    const keys = JSON.parse(localStorage.getItem('qk_cache_keys') || '[]');
+    const idx = keys.indexOf(key);
+    if (idx >= 0) keys.splice(idx, 1);
+    keys.push(key);
+    while (keys.length > CACHE_MAX) {
+      const old = keys.shift();
+      try { localStorage.removeItem(old); } catch (_) {}
+    }
+    localStorage.setItem('qk_cache_keys', JSON.stringify(keys));
+    localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
   } catch (_) {}
 }
 
@@ -452,6 +478,20 @@ function cloudType(type) {
 
 function isWashUrl(u) { return u && u.indexOf('/api/wash?') !== -1; }
 
+// ---- 提取影片核心名(用于同名多版本合并) ----
+// 去掉标题中的修饰成分: 括号内容、年份、分辨率、字幕、大小等
+function coreName(title) {
+  let t = String(title || '');
+  t = t.replace(/【[^】]*】/g, ' ');          // 去掉【】内容
+  t = t.replace(/[(\[][^)\]]*[)\]]/g, ' ');  // 去掉 () [] 内容
+  t = t.replace(/[《》「」]/g, '');           // 去掉书名号
+  t = t.replace(/\b(19|20)\d{2}\b/g, ' ');   // 去掉年份
+  t = t.replace(/(4K|2160P?|1080P?|720P?|UHD|REMUX|原盘|蓝光|HDR10?\+?|杜比|全景声|DTSHD|DTS|ATMOS|IMAX|WEB-?DL|BDRIP|中字|内封|内置|硬字幕|双语|特效|字幕|国语|中英|简繁|简中|繁中|无水印|刮削|\d+(\.\d+)?\s*(TB|GB|MB|GiB)\b)/gi, ' ');
+  t = t.replace(/(第[一二三四五六七八九十\d]+季|全\d+集|全集)/g, ' ');
+  t = t.replace(/[\s\-_·.:：,，、+]+/g, '').trim();
+  return t || String(title || '');
+}
+
 // ---- 字幕识别规则(从标题关键词判断是否有字幕) ----
 // 优先级从高到低, 命中即返回(特效字幕需在双语之前, 因"中英特效"含"中英")
 const SUBTITLE_RULES = [
@@ -478,9 +518,9 @@ function parseSubtitle(title) {
   return null; // 未知
 }
 
-// 是否明确有字幕
+// 是否明确有字幕(优先用预计算的 _sub)
 function hasSubtitle(r) {
-  const s = parseSubtitle(r.title);
+  const s = r._sub || parseSubtitle(r.title);
   return !!(s && s.subtitled);
 }
 
@@ -563,8 +603,8 @@ function sortResults(items) {
       break;
     case 'quality':
       arr.sort((a, b) => {
-        const qa = parseQuality(a.title), qb = parseQuality(b.title);
-        if (qa.score !== qb.score) return qb.score - qa.score;
+        const qa = (a._q || parseQuality(a.title)).score, qb = (b._q || parseQuality(b.title)).score;
+        if (qa !== qb) return qb - qa;
         return (b.datetime || '').localeCompare(a.datetime || '');
       });
       break;
@@ -584,7 +624,7 @@ function sortResults(items) {
 
 // 字幕质量评分(用于排序): 内封 5 > 双语/特效 4 > 中字 3 > 外挂 2 > 未知 1 > 无字幕 0
 function subtitleRank(r) {
-  const s = parseSubtitle(r.title);
+  const s = r._sub || parseSubtitle(r.title);
   if (!s) return 1;
   if (!s.subtitled) return 0;
   const rank = { inner: 5, dual: 4, effect: 4, zh: 3, ext: 2 };
@@ -597,6 +637,7 @@ async function doSearch(keyword) {
   if (!keyword) return;
   if (keyword.length > 40) keyword = keyword.slice(0, 40);
 
+  const seq = ++searchSeq;   // 本次请求序号, 防竞态
   allResults = [];
   activeFilter = 'all';
   lastKeyword = keyword;
@@ -612,6 +653,7 @@ async function doSearch(keyword) {
       const q = encodeURIComponent(keyword);
       const url = `${API_BASE}/api/search?q=${q}&sort=latest`;
       data = await fetchViaProxy(url);
+      if (seq !== searchSeq) return;  // 已被更新的搜索取代, 丢弃本次结果
       if (!data || !data.ok || !data.data) throw new Error('搜索无结果');
       setSearchCache(keyword, data);
     }
@@ -625,16 +667,26 @@ async function doSearch(keyword) {
       allResults.push(r);
     });
 
+    if (seq !== searchSeq) return;  // 二次校验
+
     if (!allResults.length) {
       setStatus(`未找到「${esc(keyword)}」相关资源,换个关键词试试`);
       resultsEl.innerHTML = emptyHTML('没有找到相关资源');
       return;
     }
+
+    // 预计算: 字幕 + 画质一次性解析, 排序和渲染复用
+    allResults.forEach(r => {
+      r._sub = parseSubtitle(r.title);
+      r._q = parseQuality(r.title);
+    });
+
     setStatus(`找到 ${allResults.length} 条相关资源`);
     document.getElementById('sortBar').style.display = 'flex';
     renderFilters();
     renderResults();
   } catch (e) {
+    if (seq !== searchSeq) return;  // 旧请求的错误也忽略
     console.error(e);
     const friendly = friendlyErr(e.message);
     setStatus(`<span class="err">搜索失败:${esc(friendly)}</span> <button class="btn" onclick="doSearch('${esc(lastKeyword.replace(/'/g, "\\'"))}')">↻ 重试</button>`);
@@ -704,10 +756,43 @@ function renderResults() {
 
   const visible = items.slice(0, visibleCount);
   const hasMore = items.length > visibleCount;
-  resultsEl.innerHTML = visible.map(r => cardHTML(r)).join('') +
+  const cardsHTML = mergeSame ? renderGrouped(visible) : visible.map(r => cardHTML(r)).join('');
+  resultsEl.innerHTML = cardsHTML +
     (hasMore
       ? `<div class="load-more-wrap"><button class="btn load-more-btn">加载更多 (${visibleCount} / ${items.length})</button></div>`
       : '');
+}
+
+// 合并同名多版本: 核心名相同的折叠成一条, 可展开
+function renderGrouped(visible) {
+  const groups = new Map();
+  for (const r of visible) {
+    const cn = coreName(r.title);
+    if (!groups.has(cn)) groups.set(cn, []);
+    groups.get(cn).push(r);
+  }
+
+  let html = '';
+  for (const [cn, list] of groups) {
+    if (list.length === 1) {
+      html += cardHTML(list[0]);
+    } else if (expandedGroups.has(cn)) {
+      html += cardHTML(list[0]);
+      html += list.slice(1).map(r => cardHTML(r)).join('');
+      html += groupToggle(cn, list.length, true);
+    } else {
+      html += cardHTML(list[0]);
+      html += groupToggle(cn, list.length, false);
+    }
+  }
+  return html;
+}
+
+function groupToggle(cn, total, expanded) {
+  const n = total - 1;
+  return `<div class="group-toggle">
+    <button class="btn group-btn" data-group="${esc(cn)}">${expanded ? '收起' : '展开'}同片源 ${n} 个其他版本</button>
+  </div>`;
 }
 
 function cardHTML(r) {
@@ -732,12 +817,12 @@ function cardHTML(r) {
   const firstLinkType = (r.links || [])[0] && (r.links[0].type);
   const resolveLabel = firstLinkType === 'quark' ? '解析夸克链接' : `解析${cloudType(firstLinkType).name}`;
 
-  // 字幕标签 (从标题解析, 优先显示)
-  const ps = parseSubtitle(title);
+  // 字幕标签 (优先用预计算的 _sub)
+  const ps = r._sub || parseSubtitle(title);
   const subTag = ps ? `<span class="sub-tag ${ps.cls}">${ps.label}</span>` : '';
 
-  // 质量标签 (从标题解析)
-  const pq = parseQuality(title);
+  // 质量标签 (优先用预计算的 _q)
+  const pq = r._q || parseQuality(title);
   let qualityTags = '';
   if (pq.res) qualityTags += `<span class="quality-tag ${pq.resCls}">${pq.res}</span>`;
   if (pq.sizeStr) qualityTags += `<span class="quality-tag size">${pq.sizeStr}</span>`;
@@ -928,8 +1013,16 @@ function bindEvents() {
     scrollToResults();
   });
 
-  // 排序切换
+  // 排序切换 + 合并同名开关
   document.getElementById('sortBar').addEventListener('click', e => {
+    // 合并同名开关(独立于排序)
+    if (e.target.closest('#mergeBtn')) {
+      mergeSame = !mergeSame;
+      const mb = document.getElementById('mergeBtn');
+      mb.classList.toggle('active', mergeSame);
+      renderResults();
+      return;
+    }
     const btn = e.target.closest('.sort-btn');
     if (!btn) return;
     activeSort = btn.dataset.sort;
@@ -940,6 +1033,15 @@ function bindEvents() {
   });
 
   resultsEl.addEventListener('click', async e => {
+    // 展开/收起同片源版本
+    const gb = e.target.closest('.group-btn');
+    if (gb) {
+      const cn = gb.dataset.group;
+      if (expandedGroups.has(cn)) expandedGroups.delete(cn);
+      else expandedGroups.add(cn);
+      renderResults();
+      return;
+    }
     // 加载更多
     if (e.target.closest('.load-more-btn')) {
       visibleCount += RENDER_BATCH;
