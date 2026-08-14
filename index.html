@@ -414,15 +414,16 @@ function normalizeKeyword(k) {
   return String(k || '').replace(/[\s\-_.]+/g, '').toLowerCase();
 }
 
-// 搜索缓存: localStorage 10 分钟有效, LRU 最多 20 个词
+// 搜索缓存: localStorage, LRU 最多 20 个词
+// 返回 { data, expired } 或 null; 过期缓存不删除, 供 stale-while-revalidate 使用
 function getSearchCache(keyword) {
   try {
     const k = 'qk_cache_' + normalizeKeyword(keyword);
     const raw = localStorage.getItem(k);
     if (!raw) return null;
     const d = JSON.parse(raw);
-    if (Date.now() - d.ts > SEARCH_CACHE_TTL) { localStorage.removeItem(k); return null; }
-    return d.data;
+    const expired = Date.now() - d.ts > SEARCH_CACHE_TTL;
+    return { data: d.data, expired };
   } catch (_) { return null; }
 }
 function setSearchCache(keyword, data) {
@@ -486,7 +487,7 @@ function coreName(title) {
   t = t.replace(/[(\[][^)\]]*[)\]]/g, ' ');  // 去掉 () [] 内容
   t = t.replace(/[《》「」]/g, '');           // 去掉书名号
   t = t.replace(/\b(19|20)\d{2}\b/g, ' ');   // 去掉年份
-  t = t.replace(/(4K|2160P?|1080P?|720P?|UHD|REMUX|原盘|蓝光|HDR10?\+?|杜比|全景声|DTSHD|DTS|ATMOS|IMAX|WEB-?DL|BDRIP|中字|内封|内置|硬字幕|双语|特效|字幕|国语|中英|简繁|简中|繁中|无水印|刮削|\d+(\.\d+)?\s*(TB|GB|MB|GiB)\b)/gi, ' ');
+  t = t.replace(/(4K|2160P?|1080P?|720P?|UHD|REMUX|原盘|蓝光|HDR10?\+?|杜比|全景声|DTSHD|DTS|ATMOS|IMAX|WEB-?DL|BDRIP|中字|内封|内置|硬字幕|双语|特效|字幕|国语|中英|简繁|简中|繁中|无水印|刮削|无字幕|生肉|无字|no\s*sub|nosub|\d+(\.\d+)?\s*(TB|GB|MB|GiB)\b)/gi, ' ');
   t = t.replace(/(第[一二三四五六七八九十\d]+季|全\d+集|全集)/g, ' ');
   t = t.replace(/[\s\-_·.:：,，、+]+/g, '').trim();
   return t || String(title || '');
@@ -638,7 +639,6 @@ async function doSearch(keyword) {
   if (keyword.length > 40) keyword = keyword.slice(0, 40);
 
   const seq = ++searchSeq;   // 本次请求序号, 防竞态
-  allResults = [];
   activeFilter = 'all';
   lastKeyword = keyword;
   visibleCount = RENDER_BATCH;
@@ -647,50 +647,86 @@ async function doSearch(keyword) {
   setStatus(`<span class="spinner"></span>正在搜索「${esc(keyword)}」...`);
 
   try {
-    // 优先读取 10 分钟内的缓存
-    let data = getSearchCache(keyword);
-    if (!data) {
-      const q = encodeURIComponent(keyword);
-      const url = `${API_BASE}/api/search?q=${q}&sort=latest`;
-      data = await fetchViaProxy(url);
-      if (seq !== searchSeq) return;  // 已被更新的搜索取代, 丢弃本次结果
-      if (!data || !data.ok || !data.data) throw new Error('搜索无结果');
-      setSearchCache(keyword, data);
+    // 1. 优先读缓存 (stale-while-revalidate: 过期也先显示)
+    const cached = getSearchCache(keyword);
+    if (cached && cached.data && cached.data.data) {
+      const ok = finalizeResults(cached.data);
+      if (seq !== searchSeq) return;
+      if (ok) {
+        if (cached.expired) {
+          // 过期缓存先秒开显示, 后台静默刷新
+          setStatus(`找到 ${allResults.length} 条相关资源(缓存秒开,正在后台刷新)`);
+          refreshCache(keyword, seq);
+        } else {
+          setStatus(`找到 ${allResults.length} 条相关资源(缓存秒开)`);
+        }
+        return;
+      }
+      // 缓存数据为空/损坏, 继续走网络请求
     }
 
-    // 去重: 以 标题+链接 去重
-    const seen = new Set();
-    (data.data.results || []).forEach(r => {
-      const key = (r.title || '') + '|' + (r.first_url || '');
-      if (seen.has(key)) return;
-      seen.add(key);
-      allResults.push(r);
-    });
-
-    if (seq !== searchSeq) return;  // 二次校验
-
-    if (!allResults.length) {
-      setStatus(`未找到「${esc(keyword)}」相关资源,换个关键词试试`);
-      resultsEl.innerHTML = emptyHTML('没有找到相关资源');
-      return;
+    // 2. 网络请求
+    const q = encodeURIComponent(keyword);
+    const url = `${API_BASE}/api/search?q=${q}&sort=latest`;
+    const data = await fetchViaProxy(url);
+    if (seq !== searchSeq) return;  // 已被更新的搜索取代
+    if (!data || !data.ok || !data.data) throw new Error('搜索无结果');
+    setSearchCache(keyword, data);
+    if (finalizeResults(data) && seq === searchSeq) {
+      setStatus(`找到 ${allResults.length} 条相关资源`);
     }
-
-    // 预计算: 字幕 + 画质一次性解析, 排序和渲染复用
-    allResults.forEach(r => {
-      r._sub = parseSubtitle(r.title);
-      r._q = parseQuality(r.title);
-    });
-
-    setStatus(`找到 ${allResults.length} 条相关资源`);
-    document.getElementById('sortBar').style.display = 'flex';
-    renderFilters();
-    renderResults();
   } catch (e) {
     if (seq !== searchSeq) return;  // 旧请求的错误也忽略
     console.error(e);
     const friendly = friendlyErr(e.message);
     setStatus(`<span class="err">搜索失败:${esc(friendly)}</span> <button class="btn" onclick="doSearch('${esc(lastKeyword.replace(/'/g, "\\'"))}')">↻ 重试</button>`);
     resultsEl.innerHTML = emptyHTML('搜索出错,请重试');
+  }
+}
+
+// 纯本地处理: 去重 + 预计算 + 渲染, 返回是否成功
+function finalizeResults(data) {
+  allResults = [];
+  const seen = new Set();
+  (data.data.results || []).forEach(r => {
+    const key = (r.title || '') + '|' + (r.first_url || '');
+    if (seen.has(key)) return;
+    seen.add(key);
+    allResults.push(r);
+  });
+
+  if (!allResults.length) {
+    setStatus('未找到相关资源,换个关键词试试');
+    resultsEl.innerHTML = emptyHTML('没有找到相关资源');
+    return false;
+  }
+
+  // 预计算: 字幕 + 画质一次性解析, 排序和渲染复用
+  allResults.forEach(r => {
+    r._sub = parseSubtitle(r.title);
+    r._q = parseQuality(r.title);
+  });
+
+  document.getElementById('sortBar').style.display = 'flex';
+  renderFilters();
+  renderResults();
+  return true;
+}
+
+// 后台静默刷新: 缓存过期时刷新, 不打断当前显示
+async function refreshCache(keyword, seq) {
+  try {
+    const q = encodeURIComponent(keyword);
+    const url = `${API_BASE}/api/search?q=${q}&sort=latest`;
+    const data = await fetchViaProxy(url);
+    if (seq !== searchSeq) return;  // 用户已搜别的, 丢弃
+    if (!data || !data.ok || !data.data) return;
+    setSearchCache(keyword, data);
+    if (finalizeResults(data) && seq === searchSeq) {
+      setStatus(`找到 ${allResults.length} 条相关资源(已刷新)`);
+    }
+  } catch (e) {
+    // 静默失败, 保留旧的缓存显示, 不打扰用户
   }
 }
 
