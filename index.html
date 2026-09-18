@@ -122,6 +122,10 @@
   #results { display: flex; flex-direction: column; gap: 12px; padding-bottom: 60px; }
   .empty { text-align: center; color: var(--text-faint); padding: 60px 0; font-size: 15px; }
   .empty svg { width: 56px; height: 56px; opacity: .3; margin-bottom: 16px; }
+  .load-more-wrap { display: flex; justify-content: center; padding: 8px 0 4px; }
+  .load-more-btn { padding: 10px 28px; font-size: 14px; }
+  .group-toggle { margin: -6px 0 4px; padding-left: 18px; }
+  .group-btn { font-size: 12.5px; padding: 5px 12px; color: var(--primary-2); border-color: rgba(59,130,246,.35); background: rgba(59,130,246,.08); }
 
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
@@ -155,6 +159,16 @@
   .quality-tag.hd1080 { background: rgba(251,191,36,.12); color: #fcd34d; border-color: rgba(251,191,36,.3); }
   .quality-tag.hd720 { background: rgba(59,130,246,.12); color: #93c5fd; border-color: rgba(59,130,246,.3); }
   .quality-tag.size { background: rgba(52,211,153,.1); color: #6ee7b7; border-color: rgba(52,211,153,.25); }
+
+  /* 字幕标签 */
+  .sub-tag {
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 5px;
+    background: rgba(52,211,153,.16); color: #6ee7b7; border: 1px solid rgba(52,211,153,.4);
+  }
+  .sub-tag.inner { background: rgba(52,211,153,.22); color: #5eead4; border-color: rgba(52,211,153,.55); }
+  .sub-tag.dual { background: rgba(96,165,250,.16); color: #93c5fd; border-color: rgba(96,165,250,.4); }
+  .sub-tag.effect { background: rgba(192,132,252,.16); color: #d8b4fe; border-color: rgba(192,132,252,.4); }
+  .sub-tag.nosub { background: rgba(248,113,113,.12); color: #fca5a5; border-color: rgba(248,113,113,.3); }
 
   .card-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
   .btn {
@@ -192,6 +206,59 @@
   .link-row a:hover { border-color: var(--primary); }
   .link-row .btn { flex-shrink: 0; }
   .link-result .tip { font-size: 11px; color: var(--text-faint); margin-top: 8px; }
+
+  /* 磁力徽章 */
+  .badge.magnet { background: rgba(251,191,36,.12); color: #fcd34d; border: 1px solid rgba(251,191,36,.3); }
+
+  /* 来源标签 */
+  .src-tag {
+    font-size: 11px; padding: 2px 8px; border-radius: 5px;
+    background: rgba(107,118,148,.14); color: var(--text-faint);
+    border: 1px solid rgba(107,118,148,.3);
+  }
+
+  /* 设置按钮 + 弹窗 */
+  .settings-btn {
+    border: 1px solid var(--border); background: var(--card); color: var(--text-dim);
+    width: 46px; height: 46px; border-radius: 50%; cursor: pointer; font-size: 19px;
+    flex-shrink: 0; transition: all .15s; line-height: 1;
+  }
+  .settings-btn:hover { border-color: var(--primary); color: var(--primary-2); transform: rotate(45deg); }
+  .settings-mask {
+    display: none; position: fixed; inset: 0; background: rgba(5,8,16,.72);
+    z-index: 998; align-items: center; justify-content: center; padding: 20px;
+  }
+  .settings-mask.show { display: flex; }
+  .settings-dialog {
+    background: var(--bg-2); border: 1px solid var(--border); border-radius: 16px;
+    padding: 24px; width: 100%; max-width: 480px; box-shadow: var(--shadow);
+  }
+  .settings-dialog h3 { font-size: 17px; margin-bottom: 16px; }
+  .settings-dialog label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 14px; }
+  .settings-dialog label b { display: block; margin-bottom: 6px; color: var(--text); font-weight: 600; }
+  .settings-dialog input {
+    width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-size: 14px; padding: 9px 12px; outline: none;
+  }
+  .settings-dialog input:focus { border-color: var(--primary); }
+  .settings-dialog .hint { font-size: 12px; color: var(--text-faint); line-height: 1.7; margin-bottom: 14px; }
+  .settings-dialog .hint a { color: var(--primary-2); text-decoration: none; }
+  .settings-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* 深链接行(更多片源) */
+  .deep-links {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin: 6px 0 14px; font-size: 13px;
+  }
+  .deep-links .lbl { color: var(--text-faint); }
+  .deep-links a { text-decoration: none; }
+  .deep-links .cfg-hint { color: var(--text-faint); font-size: 12px; cursor: pointer; }
+  .deep-links .cfg-hint:hover { color: var(--primary-2); }
+
+  /* 全部链接展开列表 */
+  .link-list-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+  .link-list-item .ltype { font-size: 11.5px; color: var(--text-dim); flex-shrink: 0; width: 58px; }
+  .link-list-item .pwd { font-size: 11.5px; color: #fcd34d; flex-shrink: 0; }
 
   /* ===== 页脚 ===== */
   footer { text-align: center; color: var(--text-faint); font-size: 12px; padding: 24px 0 40px; line-height: 1.8; }
@@ -251,11 +318,19 @@
         <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>
       </svg>
       <input id="searchInput" type="text" placeholder="输入影片 / 电视剧名称,如: 三体、流浪地球2、狂飙…" autocomplete="off">
+      <button id="settingsBtn" class="settings-btn" title="片源与代理设置">⚙</button>
       <button id="searchBtn">搜索</button>
     </div>
   </div>
 
   <div class="status-area" id="status">在上方输入影片或电视剧名称,点击搜索或按回车开始查找夸克链接</div>
+
+  <div class="deep-links" id="deepLinks" style="display:none">
+    <span class="lbl">更多片源:</span>
+    <a class="chip" id="dlLaowang" target="_blank" rel="noopener" title="老王磁力: 国内直连的磁力/BT搜索引擎">🧲 老王磁力搜</a>
+    <a class="chip" id="dlPanhub" target="_blank" rel="noopener" title="PanHub: 聚合网盘搜索(夸克/阿里/百度/115/迅雷)">📦 PanHub 聚合</a>
+    <span class="cfg-hint" id="cfgHint">⚙ 添加 PanSou 实例,聚合 15+ 片源站</span>
+  </div>
 
   <div class="sort-bar" id="sortBar" style="display:none">
     <span class="lbl">排序</span>
@@ -271,6 +346,13 @@
     <button class="sort-btn" data-sort="quality">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>高清优先
     </button>
+    <button class="sort-btn" data-sort="subtitle">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15h4"/><path d="M15 15h2"/><path d="M7 12h10"/></svg>字幕优先
+    </button>
+    <span style="flex:1"></span>
+    <button class="sort-btn" id="mergeBtn" data-merge="0" title="同名影片的多个版本折叠成一条">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>合并同名
+    </button>
   </div>
 
   <div class="filters" id="filters" style="display:none"></div>
@@ -279,8 +361,9 @@
 
 <footer>
   <div class="container">
-    资源来自公开网络(泽索搜 zreso.cn) · 仅供学习研究,请勿商用<br>
-    夸克影视搜 · <a href="https://github.com/MaroD1M/panhub" target="_blank" rel="noopener">类似开源项目 PanHub</a> · 如侵权请联系源站删除
+    资源来自公开网络(泽索搜 zreso.cn / PanSou 实例 / 老王磁力入口) · 仅供学习研究,请勿商用<br>
+    夸克影视搜 · <a href="https://github.com/fish2018/pansou" target="_blank" rel="noopener">PanSou</a> ·
+    <a href="https://github.com/MaroD1M/panhub" target="_blank" rel="noopener">PanHub</a> · 如侵权请联系源站删除
   </div>
 </footer>
 
@@ -290,27 +373,68 @@
   </svg>
 </button>
 
+<div class="settings-mask" id="settingsMask">
+  <div class="settings-dialog">
+    <h3>⚙ 片源与代理设置</h3>
+    <label><b>PanSou 实例地址</b>
+      <input id="setPansou" type="text" placeholder="如 https://your-pansou.example.com,留空 = 关闭该源">
+    </label>
+    <label><b>远程代理地址(EdgeOne 函数)</b>
+      <input id="setRemote" type="text" placeholder="如 https://xxx.edgeone.app,留空 = 跳过">
+    </label>
+    <p class="hint">
+      · PanSou(14k+ stars)可聚合 15+ 片源站(夸克/阿里/百度/115/迅雷),免费自部署,链接直达免解析<br>
+      项目: <a href="https://github.com/fish2018/pansou" target="_blank" rel="noopener">github.com/fish2018/pansou</a><br>
+      · 把本站部署到腾讯 EdgeOne Pages(免费)可获得国内免 VPN 直连 + 同源代理,教程见仓库 EDGEONE-DEPLOY.md
+    </p>
+    <div class="settings-actions">
+      <button class="btn" id="setCancel">取消</button>
+      <button class="btn primary" id="setSave">保存</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 /* ============================================================
  * 夸克影视搜 - 纯前端夸克网盘影视资源搜索
- * 数据源: 泽索搜 https://zreso.cn (公开 JSON API, 免 Key)
- * 说明: 泽索搜 API 本身不开放 CORS, 前端通过公共 CORS 代理转发
+ * 片源: ① 泽索搜 https://zreso.cn (默认, 免Key)
+ *       ② PanSou 自部署实例 (可选, 在 ⚙ 设置中填入地址)
+ *          https://github.com/fish2018/pansou 聚合15+片源站
+ *       ③ 老王磁力 / PanHub 深链接 (免抓取, 永远可用)
+ * 代理: 泽索搜不开放 CORS(403 CROSS_SITE_FORBIDDEN),
+ *       按以下顺序自动降级:
+ *       同源函数(EdgeOne部署后) → 远程EdgeOne代理 → CF Worker
+ *       → cors.eu.org → 直连
  * ============================================================ */
 
+// ---- 配置项(可在页面 ⚙ 设置中修改, 保存在 localStorage) ----
+// Cloudflare Worker 代理(worker.js 部署产物, 海外/VPN 环境快)
+const CUSTOM_PROXY = 'https://quark-movie-proxy.quark-movie-proxy.workers.dev';
+// 远程 EdgeOne 代理(国内免VPN的关键, 部署教程见 EDGEONE-DEPLOY.md)
+let REMOTE_PROXY = localStorage.getItem('qk_remote_proxy') || '';   // 如 https://xxx.edgeone.app
+// PanSou 实例地址(自部署, 聚合更多片源, 链接直达免解析)
+let PANSOU_BASE  = localStorage.getItem('qk_pansou_base') || '';    // 如 https://your-pansou.example.com
+
 // ---- CORS 代理列表(按优先级, 失败自动降级) ----
-// ---- CORS 代理列表(按优先级, 失败自动降级) ----
-// 建议部署自己的 Cloudflare Worker 代理(见同目录 worker.js), 速度快且稳定
-// 部署后把地址填到 CUSTOM_PROXY, 例如 'https://你的子域.workers.dev'
-const CUSTOM_PROXY = '';   // 留空则跳过
-const PROXIES = [
-  ...(CUSTOM_PROXY ? [u => CUSTOM_PROXY + '/?url=' + encodeURIComponent(u)] : []),
-  u => 'https://cors.eu.org/' + u,
-  u => u, // 最后尝试直连(万一源站允许)
-];
+function buildProxies() {
+  return [
+    // ① 同源边缘函数(EdgeOne Pages 部署后自动生效; GitHub Pages/本地打开时 404 快速跳过)
+    u => 'api/proxy?url=' + encodeURIComponent(u),
+    // ② 远程 EdgeOne 函数代理(在设置中配置)
+    ...(REMOTE_PROXY ? [u => REMOTE_PROXY.replace(/\/+$/, '') + '/api/proxy?url=' + encodeURIComponent(u)] : []),
+    // ③ CF Worker(海外/VPN 环境)
+    ...(CUSTOM_PROXY ? [u => CUSTOM_PROXY + '/?url=' + encodeURIComponent(u)] : []),
+    // ④ 公共代理(国内可达但限流)
+    u => 'https://cors.eu.org/' + u,
+    // ⑤ 直连(万一源站允许)
+    u => u,
+  ];
+}
 const API_BASE = 'https://zreso.cn';
-const REQUEST_TIMEOUT = 25000;  // 单次请求超时 ms
+const TIMEOUT_FIRST = 10000;  // 首个代理超时 ms (专属代理快)
+const TIMEOUT_FALLBACK = 8000; // 备用代理超时 ms (快速降级)
 
 // ---- 状态映射 ----
 const CLOUD_MAP = {
@@ -318,17 +442,33 @@ const CLOUD_MAP = {
   baidu:  { name: '百度网盘', cls: 'baidu' },
   xunlei: { name: '迅雷网盘', cls: 'xunlei' },
   uc:     { name: 'UC网盘',   cls: 'uc' },
+  aliyun: { name: '阿里云盘', cls: 'baidu' },
+  '115':  { name: '115网盘',  cls: 'uc' },
+  tianyi: { name: '天翼云盘', cls: 'uc' },
+  magnet: { name: '磁力',     cls: 'magnet' },
 };
+
+// ---- 片源注册表 ----
+const SOURCE_NAMES = { zreso: '泽索搜', pansou: 'PanSou' };
+// 各片源搜索状态: source -> {pending, total, ok, err}
+let srcState = {};
 
 // ---- 状态 ----
 let allResults = [];
 let activeFilter = 'all';
 let activeSort = 'time';
 let lastKeyword = '';
+let visibleCount = 60;            // 当前渲染条数(分页)
+const RENDER_BATCH = 60;          // 每次渲染/加载的条数
+let searchSeq = 0;                // 搜索请求序号(防竞态)
+let mergeSame = false;            // 是否合并同名多版本
+let expandedGroups = new Set();   // 已展开的合并组(核心名集合)
 let resolvingMap = {};   // t -> Promise 防止重复解析
 const linkCache = {};    // t -> raw_url 内存缓存
 let washQueue = Promise.resolve();  // 解析请求全局队列(限流)
 const WASH_INTERVAL = 2200;         // 每次解析请求之间的最小间隔 ms
+const SEARCH_CACHE_TTL = 10 * 60 * 1000; // 搜索缓存有效期 10 分钟
+const CACHE_MAX = 20;              // 缓存最多保留的搜索词数(LRU)
 
 // ---- DOM ----
 const $ = s => document.querySelector(s);
@@ -348,13 +488,16 @@ function toast(msg) {
   toast._t = setTimeout(() => toastEl.classList.remove('show'), 2200);
 }
 
-async function fetchWithProxy(url, timeout = REQUEST_TIMEOUT) {
+// 统一代理请求: 自动降级所有代理, 支持 JSON / 文本两种返回
+async function fetchViaProxy(url, { asText = false } = {}) {
+  const PROXIES = buildProxies();
   let lastErr = null;
-  for (const wrap of PROXIES) {
+  for (let i = 0; i < PROXIES.length; i++) {
+    const timeout = i === 0 ? TIMEOUT_FIRST : TIMEOUT_FALLBACK;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeout);
     try {
-      const res = await fetch(wrap(url), { signal: ctrl.signal });
+      const res = await fetch(PROXIES[i](url), { signal: ctrl.signal });
       clearTimeout(timer);
       if (!res.ok) {
         // 尝试从错误响应体读取具体原因 (如限流提示 "获取链接频繁")
@@ -367,7 +510,7 @@ async function fetchWithProxy(url, timeout = REQUEST_TIMEOUT) {
         err.status = res.status;
         throw err;
       }
-      return await res.json();
+      return asText ? await res.text() : await res.json();
     } catch (e) {
       clearTimeout(timer);
       lastErr = e;
@@ -377,36 +520,45 @@ async function fetchWithProxy(url, timeout = REQUEST_TIMEOUT) {
   throw lastErr || new Error('所有代理均失败');
 }
 
+// 关键词归一化: 去空白/连字符/下划线 + 统一小写, 提高缓存命中率
+function normalizeKeyword(k) {
+  return String(k || '').replace(/[\s\-_.]+/g, '').toLowerCase();
+}
+
+// 搜索缓存: localStorage, LRU 最多 20 个词
+// 返回 { data, expired } 或 null; 过期缓存不删除, 供 stale-while-revalidate 使用
+function getSearchCache(keyword) {
+  try {
+    const k = 'qk_cache_' + normalizeKeyword(keyword);
+    const raw = localStorage.getItem(k);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    const expired = Date.now() - d.ts > SEARCH_CACHE_TTL;
+    return { data: d.data, expired };
+  } catch (_) { return null; }
+}
+function setSearchCache(keyword, data) {
+  try {
+    const key = 'qk_cache_' + normalizeKeyword(keyword);
+    // LRU 淘汰: 维护访问顺序列表, 超上限删除最旧的
+    const keys = JSON.parse(localStorage.getItem('qk_cache_keys') || '[]');
+    const idx = keys.indexOf(key);
+    if (idx >= 0) keys.splice(idx, 1);
+    keys.push(key);
+    while (keys.length > CACHE_MAX) {
+      const old = keys.shift();
+      try { localStorage.removeItem(old); } catch (_) {}
+    }
+    localStorage.setItem('qk_cache_keys', JSON.stringify(keys));
+    localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+  } catch (_) {}
+}
+
 // 解析请求排队: 串行执行 + 最小间隔, 避免触发源站限流
 function enqueueWash(task) {
   const run = washQueue.then(task, task);
   washQueue = run.catch(() => {}).then(() => new Promise(r => setTimeout(r, WASH_INTERVAL)));
   return run;
-}
-
-// 抓取文本内容(详情页 HTML 等), 走代理
-async function fetchTextWithProxy(url, timeout = REQUEST_TIMEOUT) {
-  let lastErr = null;
-  for (const wrap of PROXIES) {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), timeout);
-    try {
-      const res = await fetch(wrap(url), { signal: ctrl.signal });
-      clearTimeout(timer);
-      if (!res.ok) {
-        let msg = 'HTTP ' + res.status;
-        try { const j = await res.json(); if (j && j.msg) msg = j.msg; } catch (_) {}
-        const err = new Error(msg);
-        err.status = res.status;
-        throw err;
-      }
-      return await res.text();
-    } catch (e) {
-      clearTimeout(timer);
-      lastErr = e;
-    }
-  }
-  throw lastErr || new Error('所有代理均失败');
 }
 
 // 从详情页 HTML 提取网盘链接 (备用解析通道, 不受 wash 限流影响)
@@ -432,11 +584,65 @@ function esc(s) {
   }[c]));
 }
 
+// 字符串短哈希(给卡片链接结果框生成稳定唯一 id)
+function strHash(s) {
+  let h = 0;
+  s = String(s || '');
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h).toString(36);
+}
+
 function cloudType(type) {
   return CLOUD_MAP[type] || { name: (type || '网盘'), cls: 'other' };
 }
 
 function isWashUrl(u) { return u && u.indexOf('/api/wash?') !== -1; }
+
+// ---- 提取影片核心名(用于同名多版本合并) ----
+// 去掉标题中的修饰成分: 括号内容、年份、分辨率、字幕、大小等
+function coreName(title) {
+  let t = String(title || '');
+  t = t.replace(/【[^】]*】/g, ' ');          // 去掉【】内容
+  t = t.replace(/[(\[][^)\]]*[)\]]/g, ' ');  // 去掉 () [] 内容
+  t = t.replace(/[《》「」]/g, '');           // 去掉书名号
+  t = t.replace(/\b(19|20)\d{2}\b/g, ' ');   // 去掉年份
+  t = t.replace(/(4K|2160P?|1080P?|720P?|UHD|REMUX|原盘|蓝光|HDR10?\+?|杜比|全景声|DTSHD|DTS|ATMOS|IMAX|WEB-?DL|BDRIP|中字|内封|内置|硬字幕|双语|特效|字幕|国语|中英|简繁|简中|繁中|无水印|刮削|无字幕|生肉|无字|no\s*sub|nosub|\d+(\.\d+)?\s*(TB|GB|MB|GiB)\b)/gi, ' ');
+  t = t.replace(/(第[一二三四五六七八九十\d]+季|全\d+集|全集)/g, ' ');
+  t = t.replace(/[\s\-_·.:：,，、+]+/g, '').trim();
+  return t || String(title || '');
+}
+
+// ---- 字幕识别规则(从标题关键词判断是否有字幕) ----
+// 优先级从高到低, 命中即返回(特效字幕需在双语之前, 因"中英特效"含"中英")
+const SUBTITLE_RULES = [
+  { type: 'inner',  label: '内封字幕', cls: 'inner',  kw: ['内封', '内嵌字幕', '内置字幕', '硬字幕'] },
+  { type: 'effect', label: '特效字幕', cls: 'effect', kw: ['特效字幕', '中英特效', '特效中字'] },
+  { type: 'dual',   label: '双语字幕', cls: 'dual',   kw: ['双语', '中英', '简繁英', '双字'] },
+  { type: 'zh',     label: '中文字幕', cls: 'inner',  kw: ['中字', '中文字幕', '国语中字', '国配中字', '繁中', '简中', '简繁', '中文'] },
+  { type: 'ext',    label: '外挂字幕', cls: 'dual',   kw: ['外挂字幕', '外挂'] },
+];
+const NOSUB_WORDS = ['无字幕', '生肉', '无字', 'no sub', 'nosub'];
+
+// 解析字幕: 返回 { subtitled, type, label, cls } 或 null
+function parseSubtitle(title) {
+  const t = String(title || '');
+  // 先排除明确无字幕的
+  if (NOSUB_WORDS.some(w => t.toLowerCase().includes(w.toLowerCase()))) {
+    return { subtitled: false, type: 'nosub', label: '无字幕', cls: 'nosub' };
+  }
+  for (const rule of SUBTITLE_RULES) {
+    if (rule.kw.some(k => t.includes(k))) {
+      return { subtitled: true, type: rule.type, label: rule.label, cls: rule.cls };
+    }
+  }
+  return null; // 未知
+}
+
+// 是否明确有字幕(优先用预计算的 _sub)
+function hasSubtitle(r) {
+  const s = r._sub || parseSubtitle(r.title);
+  return !!(s && s.subtitled);
+}
 
 // ---- 标题质量解析: 分辨率 + 大小 ----
 function parseQuality(title) {
@@ -517,8 +723,16 @@ function sortResults(items) {
       break;
     case 'quality':
       arr.sort((a, b) => {
-        const qa = parseQuality(a.title), qb = parseQuality(b.title);
-        if (qa.score !== qb.score) return qb.score - qa.score;
+        const qa = (a._q || parseQuality(a.title)).score, qb = (b._q || parseQuality(b.title)).score;
+        if (qa !== qb) return qb - qa;
+        return (b.datetime || '').localeCompare(a.datetime || '');
+      });
+      break;
+    case 'subtitle':
+      // 有字幕优先, 其次内封/双语/特效 > 中字 > 无字幕 > 未知
+      arr.sort((a, b) => {
+        const sa = subtitleRank(a), sb = subtitleRank(b);
+        if (sa !== sb) return sb - sa;
         return (b.datetime || '').localeCompare(a.datetime || '');
       });
       break;
@@ -528,48 +742,208 @@ function sortResults(items) {
   return arr;
 }
 
-// ---- 搜索 ----
+// 字幕质量评分(用于排序): 内封 5 > 双语/特效 4 > 中字 3 > 外挂 2 > 未知 1 > 无字幕 0
+function subtitleRank(r) {
+  const s = r._sub || parseSubtitle(r.title);
+  if (!s) return 1;
+  if (!s.subtitled) return 0;
+  const rank = { inner: 5, dual: 4, effect: 4, zh: 3, ext: 2 };
+  return rank[s.type] || 3;
+}
+
+// ---- 多片源搜索 ----
 async function doSearch(keyword) {
   keyword = (keyword || '').trim();
   if (!keyword) return;
   if (keyword.length > 40) keyword = keyword.slice(0, 40);
 
-  allResults = [];
+  const seq = ++searchSeq;   // 本次请求序号, 防竞态
   activeFilter = 'all';
   lastKeyword = keyword;
+  visibleCount = RENDER_BATCH;
+  allResults = [];
+  srcState = {};
   renderFilters();
   resultsEl.innerHTML = '';
-  const q = encodeURIComponent(keyword);
-  const url = `${API_BASE}/api/search?q=${q}&sort=latest`;
-  setStatus(`<span class="spinner"></span>正在搜索「${esc(keyword)}」...`);
+  updateDeepLinks(keyword);
+
+  // 并行搜索各片源, 全部返回后统一收尾
+  const tasks = [searchZreso(keyword, seq)];
+  if (PANSOU_BASE) tasks.push(searchPansou(keyword, seq));
+  await Promise.allSettled(tasks);
+
+  if (seq !== searchSeq) return;  // 已被更新的搜索取代
+  if (!allResults.length) {
+    const failed = Object.values(srcState).some(s => s.ok === false);
+    resultsEl.innerHTML = emptyHTML(failed ? '搜索出错,请重试' : '没有找到相关资源');
+  }
+  renderSourceStatus();
+}
+
+// 泽索搜记录标准化(统一挂上来源标识)
+function normalizeZreso(data) {
+  return ((data && data.data && data.data.results) || []).map(r => Object.assign({}, r, { source: 'zreso' }));
+}
+
+function sourceCount(source) {
+  return allResults.filter(r => r.source === source).length;
+}
+
+// 泽索搜(主源): 缓存秒开 + 网络请求/过期后台刷新
+async function searchZreso(keyword, seq) {
+  srcState.zreso = { pending: true, total: 0 };
+  renderSourceStatus();
+
+  const cached = getSearchCache(keyword);
+  if (cached && cached.data && cached.data.data) {
+    // stale-while-revalidate: 过期缓存也先秒开显示
+    absorbResults(normalizeZreso(cached.data), 'zreso', seq);
+    if (seq !== searchSeq) return;
+    srcState.zreso = { pending: cached.expired, ok: true, total: sourceCount('zreso') };
+    renderSourceStatus();
+    if (!cached.expired) return;
+    await refreshCache(keyword, seq);
+    return;
+  }
 
   try {
-    const data = await fetchWithProxy(url);
+    const q = encodeURIComponent(keyword);
+    const url = `${API_BASE}/api/search?q=${q}&sort=latest`;
+    const data = await fetchViaProxy(url);
+    if (seq !== searchSeq) return;
     if (!data || !data.ok || !data.data) throw new Error('搜索无结果');
+    setSearchCache(keyword, data);
+    absorbResults(normalizeZreso(data), 'zreso', seq);
+    srcState.zreso = { pending: false, ok: true, total: sourceCount('zreso') };
+  } catch (e) {
+    if (seq !== searchSeq) return;
+    console.error(e);
+    srcState.zreso = { pending: false, ok: false, err: friendlyErr(e.message) };
+  }
+  renderSourceStatus();
+}
 
-    // 去重: 以 标题+链接 去重
-    const seen = new Set();
-    (data.data.results || []).forEach(r => {
-      const key = (r.title || '') + '|' + (r.first_url || '');
-      if (seen.has(key)) return;
-      seen.add(key);
-      allResults.push(r);
-    });
-
-    if (!allResults.length) {
-      setStatus(`未找到「${esc(keyword)}」相关资源,换个关键词试试`);
-      resultsEl.innerHTML = emptyHTML('没有找到相关资源');
-      return;
+// 后台静默刷新: 缓存过期时刷新, 不打断当前显示
+async function refreshCache(keyword, seq) {
+  try {
+    const q = encodeURIComponent(keyword);
+    const url = `${API_BASE}/api/search?q=${q}&sort=latest`;
+    const data = await fetchViaProxy(url);
+    if (seq !== searchSeq) return;  // 用户已搜别的, 丢弃
+    if (data && data.ok && data.data) {
+      setSearchCache(keyword, data);
+      absorbResults(normalizeZreso(data), 'zreso', seq);
     }
-    setStatus(`找到 ${allResults.length} 条相关资源`);
+    srcState.zreso = { pending: false, ok: true, total: sourceCount('zreso') };
+  } catch (e) {
+    // 静默失败, 保留旧的缓存显示, 不打扰用户
+    if (seq !== searchSeq) return;
+    srcState.zreso = { pending: false, ok: true, total: sourceCount('zreso') };
+  }
+  renderSourceStatus();
+}
+
+// PanSou 实例(可选源): 返回的 links 带 URL, 免解析直达
+async function searchPansou(keyword, seq) {
+  srcState.pansou = { pending: true, total: 0 };
+  renderSourceStatus();
+  try {
+    const url = PANSOU_BASE.replace(/\/+$/, '') + '/api/search?kw=' + encodeURIComponent(keyword) + '&res=merge';
+    const data = await fetchViaProxy(url);
+    if (seq !== searchSeq) return;
+    const records = [];
+    ((data && data.results) || []).forEach(r => {
+      const links = (r.links || []).map(l => {
+        let t = String(l.type || '').toLowerCase();
+        if (t === 'aliyundrive') t = 'aliyun';
+        return { type: t, url: l.url || '', password: l.password || '' };
+      }).filter(l => l.url);
+      if (!r.title || !links.length) return;
+      records.push({
+        title: r.title,
+        datetime: r.datetime || '',
+        content: r.content || '',
+        links,
+        source: 'pansou',
+      });
+    });
+    absorbResults(records, 'pansou', seq);
+    srcState.pansou = { pending: false, ok: true, total: sourceCount('pansou') };
+  } catch (e) {
+    if (seq !== searchSeq) return;
+    console.error(e);
+    srcState.pansou = { pending: false, ok: false, err: friendlyErr(e.message) };
+  }
+  renderSourceStatus();
+}
+
+// 合并某片源的新结果: 同源内去重 + 预计算 + 渲染
+function absorbResults(records, source, seq) {
+  if (seq !== searchSeq) return;
+  const seen = new Set(
+    allResults.filter(r => r.source === source)
+      .map(r => (r.title || '') + '|' + (r.first_url || (r.links && r.links[0] && r.links[0].url) || ''))
+  );
+  (records || []).forEach(r => {
+    r.source = source;
+    const key = (r.title || '') + '|' + (r.first_url || (r.links && r.links[0] && r.links[0].url) || '');
+    if (seen.has(key)) return;
+    seen.add(key);
+    r._sub = parseSubtitle(r.title);
+    r._q = parseQuality(r.title);
+    allResults.push(r);
+  });
+
+  if (allResults.length) {
     document.getElementById('sortBar').style.display = 'flex';
     renderFilters();
     renderResults();
-  } catch (e) {
-    console.error(e);
-    setStatus('<span class="err">搜索失败:' + esc(e.message) + ' — 可能是网络或代理暂时不可用,请稍后重试</span>');
-    resultsEl.innerHTML = emptyHTML('搜索出错');
   }
+}
+
+// 分源状态行: 各片源进度/结果数/失败原因
+function renderSourceStatus() {
+  const parts = [];
+  let anyPending = false;
+  ['zreso', 'pansou'].forEach(s => {
+    const st = srcState[s];
+    if (!st) return;
+    const name = SOURCE_NAMES[s];
+    if (st.pending) { anyPending = true; parts.push(`<span class="spinner"></span>${name}...`); }
+    else if (st.ok) parts.push(`${name} <b>${st.total}</b> 条`);
+    else parts.push(`${name} <span class="err">✕ ${esc(st.err || '失败')}</span>`);
+  });
+  if (!parts.length) return;
+
+  if (anyPending) {
+    setStatus(`正在搜索「${esc(lastKeyword)}」:${parts.join(' · ')}${allResults.length ? `,已收录 ${allResults.length} 条` : ''}`);
+  } else if (allResults.length) {
+    setStatus(`找到 <b>${allResults.length}</b> 条相关资源(${parts.join(' · ')})`);
+  } else {
+    const failed = Object.values(srcState).some(s => s.ok === false);
+    setStatus(failed
+      ? `<span class="err">搜索失败(${parts.join(' · ')})</span> <button class="btn" onclick="doSearch(lastKeyword)">↻ 重试</button>`
+      : '各片源均未找到相关资源,换个关键词试试');
+  }
+}
+
+// 深链接行: 免抓取的补充片源入口(国内直连)
+function updateDeepLinks(keyword) {
+  const row = document.getElementById('deepLinks');
+  row.style.display = 'flex';
+  document.getElementById('dlLaowang').href = 'https://laowangsou.top/search?keyword=' + encodeURIComponent(keyword);
+  document.getElementById('dlPanhub').href = 'https://panhub.shenzjd.com/';
+  document.getElementById('cfgHint').style.display = PANSOU_BASE ? 'none' : 'inline';
+}
+
+// 将原始错误转成用户可读的友好提示
+function friendlyErr(msg) {
+  const m = msg || '';
+  if (/频繁|稍后再试|429|Too Many/i.test(m)) return '源站限流了,请等待 10-30 秒再试';
+  if (/所有代理均失败/.test(m)) return '所有代理通道均不可用,可稍后重试或部署专属代理';
+  if (/Failed to fetch|fetch failed|NetworkError|AbortError|network/i.test(m)) return '网络连接不稳定,请稍后重试';
+  if (/无结果|no result/i.test(m)) return '未找到相关资源';
+  return m;
 }
 
 function emptyHTML(text) {
@@ -587,8 +961,9 @@ function setStatus(html) {
 
 // ---- 筛选 ----
 function computeCounts() {
-  const c = { all: allResults.length };
+  const c = { all: allResults.length, sub: 0 };
   allResults.forEach(r => {
+    if (hasSubtitle(r)) c.sub++;
     const types = (r.links || []).map(l => l.type).filter(Boolean);
     types.forEach(t => { c[t] = (c[t] || 0) + 1; });
   });
@@ -598,6 +973,7 @@ function computeCounts() {
 function renderFilters() {
   const counts = computeCounts();
   const chips = [['all', '全部', counts.all]];
+  if (counts.sub) chips.push(['sub', '📝 有字幕', counts.sub]);
   Object.keys(CLOUD_MAP).forEach(t => {
     if (counts[t]) chips.push([t, CLOUD_MAP[t].name, counts[t]]);
   });
@@ -611,6 +987,7 @@ function renderFilters() {
 function renderResults() {
   const items = sortResults(allResults.filter(r => {
     if (activeFilter === 'all') return true;
+    if (activeFilter === 'sub') return hasSubtitle(r);
     return (r.links || []).some(l => l.type === activeFilter);
   }));
 
@@ -619,12 +996,50 @@ function renderResults() {
     return;
   }
 
-  resultsEl.innerHTML = items.map(r => cardHTML(r)).join('');
+  const visible = items.slice(0, visibleCount);
+  const hasMore = items.length > visibleCount;
+  const cardsHTML = mergeSame ? renderGrouped(visible) : visible.map(r => cardHTML(r)).join('');
+  resultsEl.innerHTML = cardsHTML +
+    (hasMore
+      ? `<div class="load-more-wrap"><button class="btn load-more-btn">加载更多 (${visibleCount} / ${items.length})</button></div>`
+      : '');
+}
+
+// 合并同名多版本: 核心名相同的折叠成一条, 可展开
+function renderGrouped(visible) {
+  const groups = new Map();
+  for (const r of visible) {
+    const cn = coreName(r.title);
+    if (!groups.has(cn)) groups.set(cn, []);
+    groups.get(cn).push(r);
+  }
+
+  let html = '';
+  for (const [cn, list] of groups) {
+    if (list.length === 1) {
+      html += cardHTML(list[0]);
+    } else if (expandedGroups.has(cn)) {
+      html += cardHTML(list[0]);
+      html += list.slice(1).map(r => cardHTML(r)).join('');
+      html += groupToggle(cn, list.length, true);
+    } else {
+      html += cardHTML(list[0]);
+      html += groupToggle(cn, list.length, false);
+    }
+  }
+  return html;
+}
+
+function groupToggle(cn, total, expanded) {
+  const n = total - 1;
+  return `<div class="group-toggle">
+    <button class="btn group-btn" data-group="${esc(cn)}">${expanded ? '收起' : '展开'}同片源 ${n} 个其他版本</button>
+  </div>`;
 }
 
 function cardHTML(r) {
   const title = r.title || '未知资源';
-  const date = (r.date || '').slice(0, 10) || '';
+  const date = (r.date || r.datetime || '').slice(0, 10) || '';
   const type = cloudType((r.links || [])[0] && (r.links[0].type));
   const status = r.status || ((r.links || [])[0] && r.links[0].status) || 'normal';
 
@@ -637,6 +1052,9 @@ function cardHTML(r) {
     ? types.map(t => { const c = cloudType(t); return `<span class="badge ${c.cls}">${c.name}</span>`; }).join('')
     : `<span class="badge other">${esc(type.name)}</span>`;
 
+  // 来源标签(泽索搜 / PanSou)
+  const srcTag = r.source ? `<span class="src-tag">${esc(SOURCE_NAMES[r.source] || r.source)}</span>` : '';
+
   const firstUrl = r.first_url || '';
   const isWash = isWashUrl(firstUrl);
   const isDetail = firstUrl.indexOf('/detail/') === 0;
@@ -644,34 +1062,64 @@ function cardHTML(r) {
   const firstLinkType = (r.links || [])[0] && (r.links[0].type);
   const resolveLabel = firstLinkType === 'quark' ? '解析夸克链接' : `解析${cloudType(firstLinkType).name}`;
 
-  // 质量标签 (从标题解析)
-  const pq = parseQuality(title);
+  // 直达链接(pansou 等直接给出 URL 的源, 免解析, 含磁力)
+  const directLinks = (r.links || []).filter(l => l.url && (/^https?:\/\//.test(l.url) || /^magnet:/i.test(l.url)));
+
+  // 字幕标签 (优先用预计算的 _sub)
+  const ps = r._sub || parseSubtitle(title);
+  const subTag = ps ? `<span class="sub-tag ${ps.cls}">${ps.label}</span>` : '';
+
+  // 质量标签 (优先用预计算的 _q)
+  const pq = r._q || parseQuality(title);
   let qualityTags = '';
   if (pq.res) qualityTags += `<span class="quality-tag ${pq.resCls}">${pq.res}</span>`;
   if (pq.sizeStr) qualityTags += `<span class="quality-tag size">${pq.sizeStr}</span>`;
 
+  const boltSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`;
+
   let actions = '';
-  const dataKey = isWash ? firstUrl.split('t=')[1] : firstUrl;
-  if (isWash || isDetail) {
-    const btnKind = isWash ? 'resolve-btn' : 'detail-btn';
-    actions += `<button class="btn primary ${btnKind}" data-t="${esc(dataKey)}" data-title="${esc(title)}" data-label="${esc(resolveLabel)}">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-      </svg>${resolveLabel}
-    </button>`;
-  } else if (canOpen) {
-    actions += `<a class="btn primary" href="${esc(firstUrl)}" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/>
-      </svg>打开链接
-    </a>`;
-    actions += copyBtn(firstUrl, '复制链接');
+  let dataKey = '';
+  if (directLinks.length) {
+    // 直达模式: 每个网盘一个打开按钮 + 复制/全部链接
+    dataKey = 'p' + strHash(title + '|' + directLinks[0].url);
+    directLinks.slice(0, 3).forEach(l => {
+      if (/^magnet:/i.test(l.url)) {
+        actions += `<a class="btn primary" href="${esc(l.url)}">${boltSvg}打开磁力</a>`;
+      } else {
+        const c = cloudType(l.type);
+        actions += `<a class="btn primary" href="${esc(l.url)}" target="_blank" rel="noopener">${boltSvg}打开${esc(c.name)}</a>`;
+      }
+    });
+    if (directLinks.length === 1) {
+      const l = directLinks[0];
+      actions += copyBtn(l.url + (l.password ? ' 提取码:' + l.password : ''), '复制链接');
+    } else {
+      actions += `<button class="btn links-btn" data-key="${esc(dataKey)}" data-links="${esc(JSON.stringify(directLinks))}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>全部链接(${directLinks.length})
+      </button>`;
+    }
   } else {
-    actions += `<a class="btn" href="${API_BASE}${esc(firstUrl)}" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/>
-      </svg>查看详情
-    </a>`;
+    const isWashK = isWash ? firstUrl.split('t=')[1] : firstUrl;
+    dataKey = isWashK;
+    if (isWash || isDetail) {
+      const btnKind = isWash ? 'resolve-btn' : 'detail-btn';
+      actions += `<button class="btn primary ${btnKind}" data-t="${esc(dataKey)}" data-title="${esc(title)}" data-label="${esc(resolveLabel)}">
+        ${boltSvg}${resolveLabel}
+      </button>`;
+    } else if (canOpen) {
+      actions += `<a class="btn primary" href="${esc(firstUrl)}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/>
+        </svg>打开链接
+      </a>`;
+      actions += copyBtn(firstUrl, '复制链接');
+    } else {
+      actions += `<a class="btn" href="${API_BASE}${esc(firstUrl)}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/>
+        </svg>查看详情
+      </a>`;
+    }
   }
 
   return `
@@ -682,9 +1130,10 @@ function cardHTML(r) {
     </div>
     <div class="card-meta">
       <span>${date || '时间未知'}</span>
+      ${subTag ? `<span class="dot"></span>${subTag}` : ''}
       ${qualityTags ? `<span class="dot"></span>${qualityTags}` : ''}
       ${badges ? `<span class="dot"></span>${badges}` : ''}
-      <span class="dot"></span>${statusHTML}
+      <span class="dot"></span>${srcTag}${statusHTML}
     </div>
     <div class="card-actions">${actions}</div>
     <div class="link-result" id="lr-${esc(dataKey.replace(/[^a-zA-Z0-9-]/g,''))}"></div>
@@ -724,12 +1173,12 @@ async function resolveLink(t, title) {
   const p = enqueueWash(async () => {
     let data;
     try {
-      data = await fetchWithProxy(url, 20000);
+      data = await fetchViaProxy(url);
     } catch (e) {
       // 429 限流: 等待后自动重试一次
       if (e.status === 429) {
         await new Promise(r => setTimeout(r, 4000));
-        data = await fetchWithProxy(url, 20000);
+        data = await fetchViaProxy(url);
       } else {
         throw e;
       }
@@ -766,7 +1215,7 @@ async function resolveDetail(detailPath, title) {
   box.classList.add('show');
 
   const p = enqueueWash(async () => {
-    const html = await fetchTextWithProxy(url, 20000);
+    const html = await fetchViaProxy(url, { asText: true });
     const urls = extractLinksFromDetail(html);
     if (!urls.length) throw new Error('详情页未找到可用的网盘链接');
     return { url: urls[0] };
@@ -816,15 +1265,7 @@ function showResolved(box, rawUrl, title, redirected) {
 }
 
 function errHTML(msg) {
-  let m = msg || '解析失败,链接可能已失效或网络异常';
-  // 限流提示更友好
-  if (/频繁|稍后再试|429|Too Many/i.test(m)) {
-    m = '获取链接过于频繁,源站已限流。请等待 10-30 秒后再试';
-  } else if (/所有代理均失败/.test(m)) {
-    m = '所有代理通道均不可用。建议部署自己的 Cloudflare Worker 代理(见 worker.js),可彻底解决';
-  } else if (/Failed to fetch|fetch failed|NetworkError|AbortError|network/i.test(m)) {
-    m = '网络连接不稳定(公共代理可能波动)。建议部署自己的 Cloudflare Worker 代理,可彻底解决';
-  }
+  const m = friendlyErr(msg || '解析失败,链接可能已失效或网络异常');
   return `<div class="lbl" style="color:var(--red)">${esc(m)}</div>`;
 }
 
@@ -837,22 +1278,72 @@ function bindEvents() {
     const chip = e.target.closest('.chip');
     if (!chip) return;
     activeFilter = chip.dataset.f;
+    visibleCount = RENDER_BATCH;
     document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c === chip));
     renderResults();
     scrollToResults();
   });
 
-  // 排序切换
+  // 排序切换 + 合并同名开关
   document.getElementById('sortBar').addEventListener('click', e => {
+    // 合并同名开关(独立于排序)
+    if (e.target.closest('#mergeBtn')) {
+      mergeSame = !mergeSame;
+      const mb = document.getElementById('mergeBtn');
+      mb.classList.toggle('active', mergeSame);
+      renderResults();
+      return;
+    }
     const btn = e.target.closest('.sort-btn');
     if (!btn) return;
     activeSort = btn.dataset.sort;
+    visibleCount = RENDER_BATCH;
     document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b === btn));
     renderResults();
     scrollToResults();
   });
 
   resultsEl.addEventListener('click', async e => {
+    // 展开/收起同片源版本
+    const gb = e.target.closest('.group-btn');
+    if (gb) {
+      const cn = gb.dataset.group;
+      if (expandedGroups.has(cn)) expandedGroups.delete(cn);
+      else expandedGroups.add(cn);
+      renderResults();
+      return;
+    }
+    // 展开/收起直达链接的全部链接列表
+    const lb = e.target.closest('.links-btn');
+    if (lb) {
+      const box = document.getElementById('lr-' + (lb.dataset.key || '').replace(/[^a-zA-Z0-9-]/g, ''));
+      if (box) {
+        if (box.classList.contains('show')) {
+          box.classList.remove('show');
+          box.innerHTML = '';
+        } else {
+          let links = [];
+          try { links = JSON.parse(lb.dataset.links || '[]'); } catch (_) {}
+          box.classList.add('show');
+          box.innerHTML = `<div class="lbl">全部链接(${links.length})</div>` + links.map(l => {
+            const c = cloudType(l.type);
+            return `<div class="link-list-item">
+              <span class="ltype">${esc(c.name)}</span>
+              <a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.url.length > 64 ? l.url.slice(0, 64) + '…' : l.url)}</a>
+              ${l.password ? `<span class="pwd">🔑 ${esc(l.password)}</span>` : ''}
+              <button class="btn copy-btn" data-copy="${esc(l.url + (l.password ? ' 提取码:' + l.password : ''))}">复制</button>
+            </div>`;
+          }).join('');
+        }
+      }
+      return;
+    }
+    // 加载更多
+    if (e.target.closest('.load-more-btn')) {
+      visibleCount += RENDER_BATCH;
+      renderResults();
+      return;
+    }
     // 复制
     const copyBtnEl = e.target.closest('.copy-btn');
     if (copyBtnEl) {
@@ -903,6 +1394,30 @@ function bindEvents() {
     backTop.classList.toggle('show', window.scrollY > 400);
   });
   backTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+  // ---- 设置弹窗 ----
+  const mask = document.getElementById('settingsMask');
+  const openSettings = () => {
+    document.getElementById('setPansou').value = PANSOU_BASE;
+    document.getElementById('setRemote').value = REMOTE_PROXY;
+    mask.classList.add('show');
+  };
+  document.getElementById('settingsBtn').addEventListener('click', openSettings);
+  document.getElementById('cfgHint').addEventListener('click', openSettings);
+  document.getElementById('setCancel').addEventListener('click', () => mask.classList.remove('show'));
+  mask.addEventListener('click', e => { if (e.target === mask) mask.classList.remove('show'); });
+  document.getElementById('setSave').addEventListener('click', () => {
+    PANSOU_BASE = document.getElementById('setPansou').value.trim();
+    REMOTE_PROXY = document.getElementById('setRemote').value.trim();
+    try {
+      localStorage.setItem('qk_pansou_base', PANSOU_BASE);
+      localStorage.setItem('qk_remote_proxy', REMOTE_PROXY);
+    } catch (_) {}
+    mask.classList.remove('show');
+    toast('设置已保存 ✓');
+    // 新配置立即生效: 若正在看某关键词的结果, 自动重搜
+    if (lastKeyword) doSearch(lastKeyword);
+  });
 }
 
 function scrollToResults() {
@@ -916,6 +1431,9 @@ function init() {
   // 页面初始为空, 等待用户输入搜索
 }
 init();
+
+// 调试/自动化测试钩子(不影响正常使用)
+window.__qk = { doSearch, absorbResults, cardHTML, searchPansou, get allResults() { return allResults; }, get srcState() { return srcState; } };
 </script>
 </body>
 </html>

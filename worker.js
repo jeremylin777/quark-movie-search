@@ -30,13 +30,19 @@ export default {
     }
 
     // 仅允许转发到白名单域名, 防止 Worker 被滥用
+    // 默认 zreso.cn; 需代理其他域名(如 PanSou 实例)时在 Worker 环境变量
+    // EXTRA_ALLOW_HOSTS 中配置(逗号分隔, 如: pansou.example.com,foo.com)
     let targetUrl;
     try {
       targetUrl = new URL(target);
     } catch (e) {
       return new Response('url 参数无效', { status: 400, headers: corsHeaders() });
     }
-    const allowed = ['zreso.cn'];
+    let extra = [];
+    try {
+      extra = String((env && env.EXTRA_ALLOW_HOSTS) || '').split(',').map(s => s.trim()).filter(Boolean);
+    } catch (e) { extra = []; }
+    const allowed = ['zreso.cn'].concat(extra);
     const hostOk = allowed.some(h => targetUrl.hostname === h || targetUrl.hostname.endsWith('.' + h));
     if (!hostOk) {
       return new Response('不允许访问该域名: ' + targetUrl.hostname, {
