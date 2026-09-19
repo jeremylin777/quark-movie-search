@@ -38,12 +38,20 @@ export default {
     } catch (e) {
       return new Response('url 参数无效', { status: 400, headers: corsHeaders() });
     }
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return new Response('仅支持 GET 和 HEAD 请求', { status: 405, headers: corsHeaders() });
+    }
     let extra = [];
     try {
-      extra = String((env && env.EXTRA_ALLOW_HOSTS) || '').split(',').map(s => s.trim()).filter(Boolean);
+      extra = String((env && env.EXTRA_ALLOW_HOSTS) || '').split(',')
+        .map(s => s.trim().toLowerCase().replace(/\.$/, ''))
+        .filter(s => /^[a-z0-9.-]+$/.test(s));
     } catch (e) { extra = []; }
     const allowed = ['zreso.cn'].concat(extra);
-    const hostOk = allowed.some(h => targetUrl.hostname === h || targetUrl.hostname.endsWith('.' + h));
+    if (targetUrl.protocol !== 'https:') {
+      return new Response('仅允许 HTTPS 目标地址', { status: 400, headers: corsHeaders() });
+    }
+    const hostOk = allowed.some(h => targetUrl.hostname === h);
     if (!hostOk) {
       return new Response('不允许访问该域名: ' + targetUrl.hostname, {
         status: 403,
@@ -62,10 +70,6 @@ export default {
           'Origin': 'https://zreso.cn',
         },
       };
-      if (request.method !== 'GET' && request.method !== 'HEAD') {
-        init.body = await request.arrayBuffer();
-      }
-
       const resp = await fetch(targetUrl.toString(), init);
       const headers = corsHeaders();
       // 透传必要响应头
@@ -75,7 +79,7 @@ export default {
       }
       return new Response(resp.body, { status: resp.status, headers });
     } catch (e) {
-      return new Response('代理转发失败: ' + e.message, {
+      return new Response('代理暂时不可用，请稍后重试', {
         status: 502,
         headers: corsHeaders()
       });
@@ -86,7 +90,7 @@ export default {
 function corsHeaders() {
   return new Headers({
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
     'Access-Control-Allow-Headers': '*',
     'Access-Control-Max-Age': '86400',
   });

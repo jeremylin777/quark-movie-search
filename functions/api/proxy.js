@@ -18,7 +18,7 @@ const DEFAULT_ALLOW = ['zreso.cn'];
 function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
     'Access-Control-Allow-Headers': '*',
     'Access-Control-Max-Age': '86400',
   };
@@ -33,7 +33,7 @@ function jsonResponse(body, status) {
 
 function hostAllowed(hostname, extra) {
   const all = DEFAULT_ALLOW.concat(extra || []);
-  return all.some(h => hostname === h || hostname.endsWith('.' + h));
+  return all.some(h => hostname === h);
 }
 
 export async function onRequest(context) {
@@ -41,6 +41,9 @@ export async function onRequest(context) {
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders() });
+  }
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return jsonResponse({ ok: false, msg: '仅支持 GET 和 HEAD 请求' }, 405);
   }
 
   const url = new URL(request.url);
@@ -58,8 +61,13 @@ export async function onRequest(context) {
   }
   let extra = [];
   try {
-    extra = String((env && env.EXTRA_ALLOW_HOSTS) || '').split(',').map(s => s.trim()).filter(Boolean);
+    extra = String((env && env.EXTRA_ALLOW_HOSTS) || '').split(',')
+      .map(s => s.trim().toLowerCase().replace(/\.$/, ''))
+      .filter(s => /^[a-z0-9.-]+$/.test(s));
   } catch (e) { extra = []; }
+  if (targetUrl.protocol !== 'https:') {
+    return jsonResponse({ ok: false, msg: '仅允许 HTTPS 目标地址' }, 400);
+  }
   if (!hostAllowed(targetUrl.hostname, extra)) {
     return jsonResponse({ ok: false, msg: '不允许访问该域名: ' + targetUrl.hostname + '(可在环境变量 EXTRA_ALLOW_HOSTS 中添加)' }, 403);
   }
@@ -75,10 +83,6 @@ export async function onRequest(context) {
         'Origin': targetUrl.origin,
       },
     };
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
-      init.body = await request.arrayBuffer();
-    }
-
     const resp = await fetch(targetUrl.toString(), init);
     const headers = Object.assign({}, corsHeaders());
     const ct = resp.headers.get('content-type');
@@ -87,6 +91,6 @@ export async function onRequest(context) {
     if (cc) headers['Cache-Control'] = cc;
     return new Response(resp.body, { status: resp.status, headers });
   } catch (e) {
-    return jsonResponse({ ok: false, msg: '代理转发失败: ' + (e && e.message) }, 502);
+    return jsonResponse({ ok: false, msg: '代理暂时不可用，请稍后重试' }, 502);
   }
 }
