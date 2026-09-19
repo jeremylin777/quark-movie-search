@@ -11,14 +11,14 @@
 - 🎬 五档排序:最新 / 夸克优先 / 相关度 / 高清优先 / 字幕优先
 - 🎞️ 从标题智能识别画质(4K/1080P)和字幕(内封/双语/特效/无字幕)
 - 💾 搜索缓存:10 分钟内重复搜索秒开,过期后台静默刷新
-- 🔄 五级代理自动降级:同源函数 → EdgeOne → CF Worker → 公共代理 → 直连
+- 🔄 四级代理自动降级:同源 EdgeOne 函数 → 远程 EdgeOne → CF Worker → 直连
 - 📱 移动端适配
 
 ## 🚀 在线访问
 
-**https://jeremylin777.github.io/quark-movie-search/**
+GitHub Pages 备用入口：**https://jeremylin777.github.io/quark-movie-search/**
 
-> 国内免 VPN 直连部署方案(推荐):把本仓库部署到腾讯 EdgeOne Pages,见 [EDGEONE-DEPLOY.md](EDGEONE-DEPLOY.md)
+> 国内免 VPN 推荐入口：把本仓库部署到腾讯 EdgeOne Pages 后，使用生成的 `https://<项目名>.edgeone.app` 地址访问。部署步骤见 [EDGEONE-DEPLOY.md](EDGEONE-DEPLOY.md)。
 
 ## 🏗️ 技术架构
 
@@ -27,14 +27,14 @@
    │  ① 同源代理 /api/proxy (EdgeOne Pages 部署后自动生效, 国内免VPN)
    │  ② 远程 EdgeOne 代理 (⚙ 设置中配置)
    │  ③ Cloudflare Worker 专属代理 (worker.js, 海外/VPN 快)
-   │  ④ cors.eu.org 公共代理 → ⑤ 直连
+   │  ④ 直连(仅当源站允许跨域时)
    ▼
 片源A: 泽索搜 API (zreso.cn) — wash 解析出网盘链接
 片源B: PanSou 实例 (fish2018/pansou 自部署) — 链接直达免解析
 片源C: 老王磁力 / PanHub — 深链接跳转, 免抓取
 ```
 
-- 纯前端单文件 `index.html`,无任何框架依赖
+- 原生前端 `index.html` + `client-utils.js`,无框架依赖
 - 多片源并行搜索、分源状态展示、同源内去重合并
 - 代理链按优先级自动降级,单个代理故障不影响搜索
 
@@ -43,6 +43,7 @@
 | 文件 | 说明 |
 |---|---|
 | `index.html` | 主站(单文件,含全部样式/逻辑) |
+| `client-utils.js` | 代理顺序、HTTPS 地址校验与可重试请求去重 |
 | `functions/api/proxy.js` | EdgeOne Pages 边缘函数(同源代理,国内免 VPN 核心) |
 | `worker.js` | Cloudflare Worker 专属代理代码 |
 | `EDGEONE-DEPLOY.md` | EdgeOne 部署指南 + PanSou 自部署教程 |
@@ -64,13 +65,14 @@ python -m http.server 8080
 2. Workers & Pages → Create application → Create Worker
 3. 将 `worker.js` 内容粘贴部署
 4. 得到 `https://xxx.workers.dev` 地址
-5. 打开 `index.html`,在顶部 `CUSTOM_PROXY` 配置中填入该地址
+5. 仅建议海外或可访问 Cloudflare 的环境使用；国内用户请优先部署 EdgeOne
 
 ## ⚠️ 注意事项
 
 - 解析接口(泽索搜 wash)有频率限制,连续快速点击可能触发限流,等待 10-30 秒即可
 - 资源来自公开网络,部分链接可能失效(状态显示"✕ 失效")
 - 本机网络对海外域名(workers.dev/github.io)可能不稳定,属网络环境限制
+- 默认不会使用第三方公共 CORS 代理，避免把搜索词交给公共中继；GitHub Pages 用户请在设置中填写自己的 EdgeOne 地址
 
 ## 📜 免责声明
 
