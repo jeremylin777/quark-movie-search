@@ -323,7 +323,7 @@
     </div>
   </div>
 
-  <div class="status-area" id="status">在上方输入影片或电视剧名称,点击搜索或按回车开始查找夸克链接</div>
+  <div class="status-area" id="status">在上方输入影片或电视剧名称,点击搜索或按回车开始查找夸克链接。国内免 VPN 推荐访问 EdgeOne 地址</div>
 
   <div class="deep-links" id="deepLinks" style="display:none">
     <span class="lbl">更多片源:</span>
@@ -396,7 +396,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+import { buildProxyUrls, normalizeHttpsOrigin, runDeduplicated } from './client-utils.js';
+
 /* ============================================================
  * 夸克影视搜 - 纯前端夸克网盘影视资源搜索
  * 片源: ① 泽索搜 https://zreso.cn (默认, 免Key)
@@ -406,7 +408,7 @@
  * 代理: 泽索搜不开放 CORS(403 CROSS_SITE_FORBIDDEN),
  *       按以下顺序自动降级:
  *       同源函数(EdgeOne部署后) → 远程EdgeOne代理 → CF Worker
- *       → cors.eu.org → 直连
+ *       → 直连
  * ============================================================ */
 
 // ---- 配置项(可在页面 ⚙ 设置中修改, 保存在 localStorage) ----
@@ -417,21 +419,8 @@ let REMOTE_PROXY = localStorage.getItem('qk_remote_proxy') || '';   // 如 https
 // PanSou 实例地址(自部署, 聚合更多片源, 链接直达免解析)
 let PANSOU_BASE  = localStorage.getItem('qk_pansou_base') || '';    // 如 https://your-pansou.example.com
 
-// ---- CORS 代理列表(按优先级, 失败自动降级) ----
-function buildProxies() {
-  return [
-    // ① 同源边缘函数(EdgeOne Pages 部署后自动生效; GitHub Pages/本地打开时 404 快速跳过)
-    u => 'api/proxy?url=' + encodeURIComponent(u),
-    // ② 远程 EdgeOne 函数代理(在设置中配置)
-    ...(REMOTE_PROXY ? [u => REMOTE_PROXY.replace(/\/+$/, '') + '/api/proxy?url=' + encodeURIComponent(u)] : []),
-    // ③ CF Worker(海外/VPN 环境)
-    ...(CUSTOM_PROXY ? [u => CUSTOM_PROXY + '/?url=' + encodeURIComponent(u)] : []),
-    // ④ 公共代理(国内可达但限流)
-    u => 'https://cors.eu.org/' + u,
-    // ⑤ 直连(万一源站允许)
-    u => u,
-  ];
-}
+// ---- 代理列表(按优先级, 失败自动降级) ----
+// EdgeOne 同源代理是国内推荐通道；不使用公共 CORS 中继，避免泄露搜索词。
 const API_BASE = 'https://zreso.cn';
 const TIMEOUT_FIRST = 10000;  // 首个代理超时 ms (专属代理快)
 const TIMEOUT_FALLBACK = 8000; // 备用代理超时 ms (快速降级)
@@ -463,7 +452,7 @@ const RENDER_BATCH = 60;          // 每次渲染/加载的条数
 let searchSeq = 0;                // 搜索请求序号(防竞态)
 let mergeSame = false;            // 是否合并同名多版本
 let expandedGroups = new Set();   // 已展开的合并组(核心名集合)
-let resolvingMap = {};   // t -> Promise 防止重复解析
+const resolvingMap = new Map(); // t -> Promise 防止重复解析
 const linkCache = {};    // t -> raw_url 内存缓存
 let washQueue = Promise.resolve();  // 解析请求全局队列(限流)
 const WASH_INTERVAL = 2200;         // 每次解析请求之间的最小间隔 ms
@@ -490,14 +479,17 @@ function toast(msg) {
 
 // 统一代理请求: 自动降级所有代理, 支持 JSON / 文本两种返回
 async function fetchViaProxy(url, { asText = false } = {}) {
-  const PROXIES = buildProxies();
+  const proxies = buildProxyUrls(url, {
+    remoteProxy: REMOTE_PROXY,
+    customProxy: CUSTOM_PROXY,
+  });
   let lastErr = null;
-  for (let i = 0; i < PROXIES.length; i++) {
+  for (let i = 0; i < proxies.length; i++) {
     const timeout = i === 0 ? TIMEOUT_FIRST : TIMEOUT_FALLBACK;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeout);
     try {
-      const res = await fetch(PROXIES[i](url), { signal: ctrl.signal });
+      const res = await fetch(proxies[i], { signal: ctrl.signal });
       clearTimeout(timer);
       if (!res.ok) {
         // 尝试从错误响应体读取具体原因 (如限流提示 "获取链接频繁")
@@ -940,7 +932,7 @@ function updateDeepLinks(keyword) {
 function friendlyErr(msg) {
   const m = msg || '';
   if (/频繁|稍后再试|429|Too Many/i.test(m)) return '源站限流了,请等待 10-30 秒再试';
-  if (/所有代理均失败/.test(m)) return '所有代理通道均不可用,可稍后重试或部署专属代理';
+  if (/所有代理均失败/.test(m)) return '代理通道均不可用,请访问或配置 EdgeOne 国内代理后重试';
   if (/Failed to fetch|fetch failed|NetworkError|AbortError|network/i.test(m)) return '网络连接不稳定,请稍后重试';
   if (/无结果|no result/i.test(m)) return '未找到相关资源';
   return m;
@@ -1157,20 +1149,12 @@ async function resolveLink(t, title) {
     showResolved(box, linkCache[t], title);
     return;
   }
-  if (resolvingMap[t]) {
-    try {
-      const { url: u, redirected } = await resolvingMap[t];
-      showResolved(box, u, title, redirected);
-    } catch (e) { box.innerHTML = errHTML(e.message); }
-    return;
-  }
-
   const url = `${API_BASE}/api/wash?t=${encodeURIComponent(t)}`;
   box.innerHTML = `<div style="color:var(--text-dim);font-size:13px"><span class="spinner" style="width:14px;height:14px;vertical-align:-2px"></span>正在解析链接,请稍候...</div>`;
   box.classList.add('show');
 
   // 解析请求放入全局队列, 串行 + 间隔, 避免触发源站限流(429)
-  const p = enqueueWash(async () => {
+  const p = runDeduplicated(resolvingMap, t, () => enqueueWash(async () => {
     let data;
     try {
       data = await fetchViaProxy(url);
@@ -1187,9 +1171,7 @@ async function resolveLink(t, title) {
     if (data.ok && data.raw_url) return { url: data.raw_url };
     if (data.redirect) return { url: data.redirect, redirected: true };
     throw new Error(data.msg || '链接无效或已过期');
-  });
-
-  resolvingMap[t] = p;
+  }));
   try {
     const { url: raw, redirected } = await p;
     linkCache[t] = raw;
@@ -1407,8 +1389,13 @@ function bindEvents() {
   document.getElementById('setCancel').addEventListener('click', () => mask.classList.remove('show'));
   mask.addEventListener('click', e => { if (e.target === mask) mask.classList.remove('show'); });
   document.getElementById('setSave').addEventListener('click', () => {
-    PANSOU_BASE = document.getElementById('setPansou').value.trim();
-    REMOTE_PROXY = document.getElementById('setRemote').value.trim();
+    try {
+      PANSOU_BASE = normalizeHttpsOrigin(document.getElementById('setPansou').value, 'PanSou 实例地址');
+      REMOTE_PROXY = normalizeHttpsOrigin(document.getElementById('setRemote').value, '远程 EdgeOne 代理地址');
+    } catch (e) {
+      toast(e.message);
+      return;
+    }
     try {
       localStorage.setItem('qk_pansou_base', PANSOU_BASE);
       localStorage.setItem('qk_remote_proxy', REMOTE_PROXY);
@@ -1433,6 +1420,7 @@ function init() {
 init();
 
 // 调试/自动化测试钩子(不影响正常使用)
+window.doSearch = doSearch;
 window.__qk = { doSearch, absorbResults, cardHTML, searchPansou, get allResults() { return allResults; }, get srcState() { return srcState; } };
 </script>
 </body>
