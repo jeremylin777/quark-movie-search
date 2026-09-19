@@ -20,6 +20,16 @@ async function withFetchStub(task) {
   }
 }
 
+async function withFetchHandler(handler, task) {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = handler;
+  try {
+    return await task();
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
 test('rejects methods other than GET and HEAD', async () => {
   await withFetchStub(async () => {
     const response = await onRequest({ request: request('POST', 'https://zreso.cn/api/search') });
@@ -32,4 +42,16 @@ test('rejects HTTP and unlisted hosts before fetching', async () => {
     assert.equal((await onRequest({ request: request('GET', 'http://zreso.cn/api/search') })).status, 400);
     assert.equal((await onRequest({ request: request('GET', 'https://example.com/') })).status, 403);
   });
+});
+
+test('does not follow an allowlisted host redirect', async () => {
+  let init;
+  await withFetchHandler(async (_url, requestInit) => {
+    init = requestInit;
+    return new Response(null, { status: 302, headers: { Location: 'https://example.com/' } });
+  }, async () => {
+    const response = await onRequest({ request: request('GET', 'https://zreso.cn/api/search') });
+    assert.equal(response.status, 502);
+  });
+  assert.equal(init.redirect, 'manual');
 });

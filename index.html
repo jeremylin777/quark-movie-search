@@ -414,10 +414,18 @@ import { buildProxyUrls, normalizeHttpsOrigin, runDeduplicated } from './client-
 // ---- 配置项(可在页面 ⚙ 设置中修改, 保存在 localStorage) ----
 // Cloudflare Worker 代理(worker.js 部署产物, 海外/VPN 环境快)
 const CUSTOM_PROXY = 'https://quark-movie-proxy.quark-movie-proxy.workers.dev';
+function loadStoredHttpsOrigin(key, label) {
+  try {
+    return normalizeHttpsOrigin(localStorage.getItem(key) || '', label);
+  } catch (_) {
+    try { localStorage.removeItem(key); } catch (_) {}
+    return '';
+  }
+}
 // 远程 EdgeOne 代理(国内免VPN的关键, 部署教程见 EDGEONE-DEPLOY.md)
-let REMOTE_PROXY = localStorage.getItem('qk_remote_proxy') || '';   // 如 https://xxx.edgeone.app
+let REMOTE_PROXY = loadStoredHttpsOrigin('qk_remote_proxy', '远程 EdgeOne 代理地址'); // 如 https://xxx.edgeone.app
 // PanSou 实例地址(自部署, 聚合更多片源, 链接直达免解析)
-let PANSOU_BASE  = localStorage.getItem('qk_pansou_base') || '';    // 如 https://your-pansou.example.com
+let PANSOU_BASE  = loadStoredHttpsOrigin('qk_pansou_base', 'PanSou 实例地址'); // 如 https://your-pansou.example.com
 
 // ---- 代理列表(按优先级, 失败自动降级) ----
 // EdgeOne 同源代理是国内推荐通道；不使用公共 CORS 中继，避免泄露搜索词。

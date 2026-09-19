@@ -82,8 +82,12 @@ export async function onRequest(context) {
         'Referer': targetUrl.origin + '/',
         'Origin': targetUrl.origin,
       },
+      redirect: 'manual',
     };
     const resp = await fetch(targetUrl.toString(), init);
+    if (resp.status >= 300 && resp.status < 400) {
+      return jsonResponse({ ok: false, msg: '上游重定向已被拒绝' }, 502);
+    }
     const headers = Object.assign({}, corsHeaders());
     const ct = resp.headers.get('content-type');
     if (ct) headers['Content-Type'] = ct;

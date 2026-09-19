@@ -69,8 +69,15 @@ export default {
           'Referer': 'https://zreso.cn/',
           'Origin': 'https://zreso.cn',
         },
+        redirect: 'manual',
       };
       const resp = await fetch(targetUrl.toString(), init);
+      if (resp.status >= 300 && resp.status < 400) {
+        return new Response('上游重定向已被拒绝', {
+          status: 502,
+          headers: corsHeaders()
+        });
+      }
       const headers = corsHeaders();
       // 透传必要响应头
       for (const h of ['content-type', 'cache-control']) {

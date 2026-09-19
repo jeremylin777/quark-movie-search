@@ -28,6 +28,7 @@ def test_domestic_proxy_smoke():
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
+            page.add_init_script("localStorage.setItem('qk_remote_proxy', 'http://legacy-proxy.example')")
             page.on('pageerror', lambda error: errors.append(str(error)))
 
             def proxy_route(route):
@@ -45,7 +46,10 @@ def test_domestic_proxy_smoke():
 
             def route_all(route):
                 url = route.request.url
-                if '/api/proxy?' in url:
+                if '/api/proxy?' in url or '.workers.dev/?url=' in url:
+                    requested.append(url)
+                    if url.startswith(base_url):
+                        return route.fulfill(status=404, json={'ok': False, 'msg': 'local function absent'})
                     return proxy_route(route)
                 if url.startswith(base_url):
                     return route.continue_()
@@ -57,6 +61,7 @@ def test_domestic_proxy_smoke():
             page.locator('#searchBtn').click()
             page.locator('.card').wait_for()
             assert requested and '/api/proxy?url=' in requested[0]
+            assert not any(url.startswith('http://legacy-proxy.example') for url in requested)
             page.locator('.resolve-btn').click()
             page.locator('.link-result .lbl').wait_for()
             first_wash_count = sum('/api/wash' in unquote(url) for url in requested)
